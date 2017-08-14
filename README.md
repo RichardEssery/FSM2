@@ -1,6 +1,6 @@
 # FSM2
 
-The Factorial Snow Model (FSM) is a multi-physics energy balance model of accumulation and melt of snow on the ground. Version 2 adds forest canopy model options and the possibility of running simulations for more than one point at the same time. In contrast with FSM1, which selects options when it is run, FSM2 options are selected when it is compiled for greater efficiency. A full description is given by [Essery (2015)](#Essery). FSM2 is built and run in the same way as FSM1.
+The Factorial Snow Model (FSM) is a multi-physics energy balance model of accumulation and melt of snow on the ground [(Essery, 2015)](#Essery). Version 2 adds forest canopy model options and the possibility of running simulations for more than one point at the same time. In contrast with FSM1, which selects options when it is run, FSM2 options are selected when it is compiled for greater efficiency. FSM2 is built and run in the same way as FSM1.
 
 ## Building the model
 
@@ -17,8 +17,6 @@ Model options are selected by defining variables in `src/OPTS.h` before compilat
 | EXCHNG   | Surface exchange options     | 0 - fixed <br> 1 - stability adjusted |
 | HYDROL   | Snow hydrology options       | 0 - free draining <br> 1 - bucket     | 
 
-
-
 ## Running the model
 
 FSM2 requires meteorological driving data and namelists to set options and parameters. The model is run with the command
@@ -29,11 +27,40 @@ or
 
     FSM2.exe < nlst.txt
 
-where `nlst.txt` is a text file containing seven namelists described below; `nlst_CdP_0506.txt` gives an example to run FSM for the winter of 2005-2006 at Col de Porte ([Morin et al. 2011](#Morin)). All of the namelists have to be present in the same order as in the example, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
+where `nlst.txt` is a text file containing seven namelists described below; `nlst_CdP_0506.txt` gives an example to run FSM2 for the winter of 2005-2006 at Col de Porte ([Morin et al. 2011](#Morin)). All of the namelists have to be present in the same order as in the example, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
 
-### Driving data
+### Grid dimensions namelist `&gridpnts`
 
-Meteorological driving data are read from a text file named in namelist `&drive`. A driving data file has 12 columns containing the variables listed in the table below. Each row of the file corresponds with a timestep. Driving data for the Col de Porte example are given in file `data/met_CdP_0506.txt`.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| Nsmax    | 3       | Maximum number of snow layers                    |
+| Nsoil    | 4       | Number of soil layers                            |
+| Nx       | 1       | Number of grid points in x direction or sequence |
+| Ny       | 1       | Number of grid points in y direction             |
+
+FSM2 can be run at a point, at a sequence of points or on a rectangular grid by selecting values for Nx and Ny.
+
+### Model levels namelist `&gridlevs`
+
+| Variable | Default          | Units | Description |
+|----------|------------------|-------|-------------|
+| Dzsnow   | 0.1 0.2 0.4      | m     | Minimum snow layer thicknesses  |
+| Dzsoil   | 0.1 0.2 0.4 0.8  | m     | Soil layer thicknesses          |
+
+Snow and soil layers are numbered from the top downwards. If layer thicknesses are specified in `&gridlevs`, they must match the numbers of layers specfied in `&gridpnts`; this is not checked automatically.
+
+### Driving data namelist `&drive` and data files
+
+| Variable | Default | Units | Description |
+|----------|---------|-------|-------------|
+| met_file | 'met.txt' | string  | Driving file name              |
+| dt       | 3600      | s       | Time step                      |
+| zT       | 2         | m       | Temperature measurement height |
+| zU       | 10        | m       | Wind speed measurement height  |
+
+Measurement heights have to be above the canopy height.
+
+Meteorological driving data are read from the text file named in namelist `&drive`. A driving data file has 12 columns containing the variables listed in the table below. Each row of the file corresponds with a timestep. Driving data for the Col de Porte example are given in file `data/met_CdP_0506.txt`.
 
 | Variable | Units  | Description       |
 |----------|--------|-------------------|
@@ -49,38 +76,6 @@ Meteorological driving data are read from a text file named in namelist `&drive`
 | RH       | RH     | Relative humidity    |
 | Ua       | m s<sup>-1</sup> | Wind speed |
 | Ps       | Pa     | Surface air pressure |
-
-### Grid dimensions namelist `&gridpnts`
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| Nsmax    | 3       | Maximum number of snow layers                    |
-| Nsoil    | 4       | Number of soil layers                            |
-| Nx       | 1       | Number of grid points in x direction or sequence |
-| Ny       | 1       | Number of grid points in y direction             |
-
-FSM2 can be run at a point, at a sequence of points or on a rectangular grid by selecting values for Nx and Ny.
-
-
-### Model levels namelist `&gridlevs`
-
-| Variable | Default          | Units | Description |
-|----------|------------------|-------|-------------|
-| Dzsnow   | 0.1 0.2 0.4      | m     | Minimum snow layer thicknesses  |
-| Dzsoil   | 0.1 0.2 0.4 0.8  | m     | Soil layer thicknesses          |
-
-If layer thicknesses are specified in `&gridlevs`, they must match the numbers of layers specfied in `&gridpnts`; this is not checked automatically.
-
-### Driving data namelist `&drive`
-
-| Variable | Default | Units | Description |
-|----------|---------|-------|-------------|
-| met_file | 'met.txt' | string  | Driving file name              |
-| dt       | 3600      | s       | Time step                      |
-| zT       | 2         | m       | Temperature measurement height |
-| zU       | 10        | m       | Wind speed measurement height  |
-
-Measurement heights have to be above the canopy height.
 
 ### Parameter namelist `&params`
 
@@ -110,7 +105,6 @@ Measurement heights have to be above the canopy height.
 | Wirr | 0.03 | -    | Irreducible liquid water content (if n<sub>w</sub>=1)              |
 | z0sn | 0.01 | m    | Snow roughness length                                              |
 
-
 ### Site characteristics namelist `&maps` and map files
 
 | Variable | Default | Units | Description |
@@ -138,8 +132,6 @@ or read from a file 'albedo.txt' containing 10 values by including
 
 Note that sky view can be set independently of vegetation cover to allow for grid cells shaded by topography or vegetation in neighbouring cells.
 
-
-
 ### Initial values namelist `&initial`
 
 | Variable   | Default | Units  | Description |
@@ -148,7 +140,7 @@ Note that sky view can be set independently of vegetation cover to allow for gri
 | fsat       | 4 * 0.5 | -      | Initial moisture content of soil layers as fractions of saturation |
 | Tsoil      | 4 * 285 | K      | Initial temperatures of soil layers                                |
 
-Soil temperature and moisture content are taken from the namelist and FSM is initialized in a snow-free state by default. If a start file is named, it should be a text file containing initial values for each of the state variables in order:
+Soil temperature and moisture content are taken from the namelist and FSM2 is initialized in a snow-free state by default. If a start file is named, it should be a text file containing initial values for each of the state variables in order:
 
 | Variable    |  Units             | Description |
 |-------------|--------------------|-------------|
@@ -166,17 +158,22 @@ Soil temperature and moisture content are taken from the namelist and FSM is ini
 | Tsurf(1:Nx,1:Ny)         |  K                  | Surface skin temperature                   |
 | Tveg(1:Nx,1:Ny)          |  K                  | Vegetation temperature                     |
 
-Snow and soil layers are numbered from the top downwards. The easiest way to generate a start file is to spin up the model by running for a whole number of years without a start file and then rename the dump file produced at the end of the run as a start file for a new run.
+The easiest way to generate a start file is to spin up the model by running for a whole number of years without a start file and then rename the dump file produced at the end of the run as a start file for a new run.
 
-### Output namelist `&outputs`
+### Output namelist `&outputs` and output files
+
+Although still simple, FSM2 has more flexible output options than FSM1. 
 
 | Variable  | Default    | Description |
 |-----------|------------|-------------|
 | Nave      | 24         | Number of timesteps in averaged outputs |
-| out_file  | 'out.txt'  | Output file name |
-| dump_file | 'dump.txt' | Dump file name   |
+| Nsmp      | 12         | Timestep of sample outputs              |
+| runid     | none       | Run identifier                          |
+| dump_file | 'dump'     | Dump file name                          |
 
-At present a simple fixed output format is used. The output text file has 10 columns:
+For the defaults, daily averages and samples at noon will be produced if the driving data has a one-hour timestep and starts at 01:00.
+
+The sample file has 4 + Nx*Ny columns:
 
 | Variable | Units  | Description       |
 |----------|--------|-------------------|
@@ -184,14 +181,9 @@ At present a simple fixed output format is used. The output text file has 10 col
 | month    | months | Month of the year |
 | day      | days   | Day of the month  |
 | hour     | hours  | Hour of the day   |
-| alb      | -      | Effective albedo  |
-| Rof      | kg m<sup>-2</sup> | Cumulated runoff from snow    |
-| snd      | m      | Average snow depth                       |
-| SWE      | kg m<sup>-2</sup> | Average snow water equivalent |
-| Tsf      | &deg;C | Average surface temperature              |
-| Tsl      | &deg;C | Average soil temperature at 20 cm depth  |
-
-Example file `data/out_CdP_0506.txt` contains output from a run of FSM configuration 31; `data/obs_CdP_0506.txt` contains daily observations of the same variables, with -99 indicating missing data.
+| snd(1:Nx,1:Ny)    | m                 | Snow depth            |
+| SWE(1:Nx,1:Ny)    | kg m<sup>-2</sup> | Snow water equivalent |
+| Sveg(1:Nx,1:Ny)   | kg m<sup>-2</sup> | Canopy snow mass      |
 
 At the end of a run, the state variables are written to a dump file with the same format as the start file.
  
