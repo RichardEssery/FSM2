@@ -61,12 +61,10 @@ Meteorological driving data are read from a text file named in namelist `&drive`
 | Nx       | 1       | Number of grid points in x direction or sequence |
 | Ny       | 1       | Number of grid points in y direction             |
 
-FSM2 can be run at a point, at a sequence of points or on a rectangular grid.
+FSM2 can be run at a point, at a sequence of points or on a rectangular grid by selecting values for Nx and Ny.
 
 
-### Model levels namelist 
-
-`&gridlevs`
+### Model levels namelist `&gridlevs`
 
 | Variable | Default          | Units | Description |
 |----------|------------------|-------|-------------|
@@ -119,7 +117,7 @@ Measurement heights have to be above the canopy height.
 | z0sn | 0.01 | m    | Snow roughness length                                              |
 
 
-### Site characteristics 
+### Site characteristics namelist and map files
 
 `&maps`
 
@@ -138,11 +136,11 @@ Site characteristics can either be left as default values, set to a sequence of 
 
     alb0 = 10*0.1
 
-in the namelist, set to sequence by including
+in namelist `&maps`, set to sequence by including
 
     alb0 = 0.2 0.2 0.1 0.1 0.1 0.1 0.1 0.1 0.2 0.2
 
-or read from a file albedo.txt containing 10 values by including
+or read from a file 'albedo.txt' containing 10 values by including
 
     alb0_file = 'albedo.txt'
 
