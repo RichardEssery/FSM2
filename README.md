@@ -50,9 +50,7 @@ Meteorological driving data are read from a text file named in namelist `&drive`
 | Ua       | m s<sup>-1</sup> | Wind speed |
 | Ps       | Pa     | Surface air pressure |
 
-### Grid dimensions namelist 
-
-`&gridpnts`
+### Grid dimensions namelist `&gridpnts`
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -73,9 +71,7 @@ FSM2 can be run at a point, at a sequence of points or on a rectangular grid by 
 
 If layer thicknesses are specified in `&gridlevs`, they must match the numbers of layers specfied in `&gridpnts`; this is not checked automatically.
 
-### Driving data namelist 
-
-`&drive`
+### Driving data namelist `&drive`
 
 | Variable | Default | Units | Description |
 |----------|---------|-------|-------------|
@@ -86,9 +82,7 @@ If layer thicknesses are specified in `&gridlevs`, they must match the numbers o
 
 Measurement heights have to be above the canopy height.
 
-### Parameter namelist 
-
-`&params`
+### Parameter namelist `&params`
 
 | Variable | Default | Units | Description |
 |----------|---------|-------|-------------|
@@ -117,9 +111,7 @@ Measurement heights have to be above the canopy height.
 | z0sn | 0.01 | m    | Snow roughness length                                              |
 
 
-### Site characteristics namelist and map files
-
-`&maps`
+### Site characteristics namelist `&maps` and map files
 
 | Variable | Default | Units | Description |
 |----------|---------|-------|-------------|
@@ -148,9 +140,7 @@ Note that sky view can be set independently of vegetation cover to allow for gri
 
 
 
-### Initial values namelist 
-
-`&initial`
+### Initial values namelist `&initial`
 
 | Variable   | Default | Units  | Description |
 |------------|---------|--------|-------------|
@@ -178,9 +168,7 @@ Soil temperature and moisture content are taken from the namelist and FSM is ini
 
 Snow and soil layers are numbered from the top downwards. The easiest way to generate a start file is to spin up the model by running for a whole number of years without a start file and then rename the dump file produced at the end of the run as a start file for a new run.
 
-### Output namelist 
-
-`&outputs`
+### Output namelist `&outputs`
 
 | Variable  | Default    | Description |
 |-----------|------------|-------------|
