@@ -10,12 +10,12 @@ Model options are selected by defining variables in `src/OPTS.h` before compilat
 
 | Variable | Description                  | Options                        |
 |----------|------------------------------|--------------------------------|
-| ALBEDO   | Snow albedo options          | <ul><li>diagnosed</li><li>prognostic</li></ul> |
-| CANMOD   | Canopy model options         | 0 zero-layer <br> 1 - one-layer)                |
-| CONDCT   | Thermal conductivity options |(0 - fixed, 1 - density function) |
-| DENSTY   | Snow density options         |(0 - fixed, 1 - prognostic)               |
-| EXCHNG   | Surface exchange options     |(0 - fixed, 1 - stability adjusted)   |
-| HYDROL   | Snow hydrology options       | (0 - free draining, 1 - bucket)      | 
+| ALBEDO   | Snow albedo options          | 0 - diagnosed <br> 1 - prognostic     |
+| CANMOD   | Canopy model options         | 0 - zero-layer <br> 1 - one-layer     |
+| CONDCT   | Thermal conductivity options | 0 - fixed <br> 1 - density function   |
+| DENSTY   | Snow density options         | 0 - fixed <br> 1 - prognostic         |
+| EXCHNG   | Surface exchange options     | 0 - fixed <br> 1 - stability adjusted |
+| HYDROL   | Snow hydrology options       | 0 - free draining <br> 1 - bucket     | 
 
 
 
