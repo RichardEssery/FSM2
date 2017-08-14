@@ -1,28 +1,35 @@
 # FSM2
 
-The Factorial Snow Model (FSM) is a multi-physics energy balance model of accumulation and melt of snow on the ground. The model includes 5 parameterizations that can be switched on or off independently, giving 32 possible model configurations identified by decimal numbers between 0 and 31. The corresponding 5 digit binary number n<sub>a</sub>n<sub>c</sub>n<sub>d</sub>n<sub>e</sub>n<sub>w</sub> has digits n<sub>a</sub> for prognostic snow albedo, n<sub>c</sub> for variable thermal conductivity, n<sub>d</sub> for prognostic snow density, n<sub>e</sub> for stability adjustment of the turbulent exchange coefficient and n<sub>w</sub> for prognostic liquid water content; the digits are 0 if a parametrization is switched off and 1 if it is switched on. A full description is given by [Essery (2015)](#Essery).
+The Factorial Snow Model (FSM) is a multi-physics energy balance model of accumulation and melt of snow on the ground. Version 2 adds forest canopy model options and the possibility of running simulations for more than one point at the same time. In contrast with FSM1, which selects options when it is run, FSM2 options are selected when it is compiled for greater efficiency. A full description is given by [Essery (2015)](#Essery). FSM2 is built and run in the same way as FSM1.
 
 ## Building the model
 
-FSM is coded in Fortran. A linux executable `FSM` or a Windows executable `FSM.exe` is produced by running the script `compil.sh` or the batch file `compil.bat`. Both use the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler but could be edited to use other compilers. The `bin` directory holds precompiled executables.
+FSM2 is coded in Fortran. A linux executable `FSM2` or a Windows executable `FSM2.exe` is produced by running the script `compil.sh` or the batch file `compil.bat`. Both use the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler but could be edited to use other compilers. 
+
+Model options are selected by defining variables in `src/OPTS.h` before compilation
+
+| Variable | Description                  | Options                        |
+|----------|------------------------------|--------------------------------|
+| ALBEDO   | Snow albedo options          | <ul><li>diagnosed</li><li>prognostic</li></ul> |
+| CANMOD   | Canopy model options         |(0 - 0-layer, 1 - 1-layer)                |
+| CONDCT   | Thermal conductivity options |(0 - fixed, 1 - density function) |
+| DENSTY   | Snow density options         |(0 - fixed, 1 - prognostic)               |
+| EXCHNG   | Surface exchange options     |(0 - fixed, 1 - stability adjusted)   |
+| HYDROL   | Snow hydrology options       | (0 - free draining, 1 - bucket)      | 
+
+
 
 ## Running the model
 
-FSM requires meteorological driving data and namelists to set options and parameters. The model is run with the command
+FSM2 requires meteorological driving data and namelists to set options and parameters. The model is run with the command
 
-    ./FSM < nlst.txt
+    ./FSM2 < nlst.txt
 
 or
 
-    FSM.exe < nlst.txt
+    FSM2.exe < nlst.txt
 
-where `nlst.txt` is a text file containing five namelists described below; `nlst_CdP_0506.txt` gives an example to run FSM for the winter of 2005-2006 at Col de Porte ([Morin et al. 2011](#Morin)). All of the namelists have to be present in the same order as in the example, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
-
-The executable runs a single configuration of FSM, but a Python script is provided to run an ensemble of simulations. For example,
-
-    python FSMens.py nlst_CdP_0506.txt
-
-will run all configurations of FSM for Col de Porte and write output files tagged with the binary configuration numbers to directory `output`.
+where `nlst.txt` is a text file containing seven namelists described below; `nlst_CdP_0506.txt` gives an example to run FSM for the winter of 2005-2006 at Col de Porte ([Morin et al. 2011](#Morin)). All of the namelists have to be present in the same order as in the example, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
 
 ### Driving data
 
@@ -42,14 +49,6 @@ Meteorological driving data are read from a text file named in namelist `&drive`
 | RH       | RH     | Relative humidity    |
 | Ua       | m s<sup>-1</sup> | Wind speed |
 | Ps       | Pa     | Surface air pressure |
-
-### Model configuration file 
-
-`&config`
-
-| Variable | Range | Default | Description |
-|----------|-------|---------|-------------|
-| [nconfig](#configs) | 0 - 31 | 31 | Configuration number |
 
 ### Grid dimensions namelist 
 
@@ -74,7 +73,7 @@ FSM2 can be run at a point, at a sequence of points or on a rectangular grid.
 | Dzsnow   | 0.1 0.2 0.4      | m     | Minimum snow layer thicknesses  |
 | Dzsoil   | 0.1 0.2 0.4 0.8  | m     | Soil layer thicknesses          |
 
-If layer thicknesses are specified in the namelist, they must match the numbers of layers in `&gridpnts`; this is not checked automatically.
+If layer thicknesses are specified in `&gridlevs`, they must match the numbers of layers specfied in `&gridpnts`; this is not checked automatically.
 
 ### Driving data namelist 
 
