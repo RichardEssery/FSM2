@@ -164,17 +164,21 @@ Soil temperature and moisture content are taken from the namelist and FSM is ini
 
 | Variable    |  Units             | Description |
 |-------------|--------------------|-------------|
-|  albs       |  -                 | Snow albedo |
-|  Ds(1:3)    |  m                 | Snow layer thicknesses                     |
-|  Nsnow      |  -                 | Number of snow layers                      | 
-|  Sice(1:3)  |  kg m<sup>-2</sup> | Ice content of snow layers                 |
-|  Sliq(1:3)  |  kg m<sup>-2</sup> | Liquid content of snow layers              |
-|  theta(1:4) |  -                 | Volumetric moisture content of soil layers |
-|  Tsnow(1:3) |  K                 | Snow layer temperatures                    | 
-|  Tsoil(1:4) |  K                 | Soil layer temperatures                    |
-|  Tsurf      |  K                 | Surface skin temperature                   |
+| albs(1:Nx,1:Ny)          |  -                  | Snow albedo                                |
+| Ds(1:Nsmax,1:Nx,1:Ny)    |  m                  | Snow layer thicknesses                     |
+| Nsnow(1:Nx,1:Ny)         |  -                  | Number of snow layers                      | 
+| Qcan(1:Nx,1:Ny)          |  -                  | Canopy air space humidity                  |
+| Sice(1:Nsmax,1:Nx,1:Ny)  |  kg m<sup>-2</sup>  | Ice content of snow layers                 |
+| Sliq(1:Nsmax,1:Nx,1:Ny)  |  kg m<sup>-2</sup>  | Liquid content of snow layers              |
+| Sveg(1:Nsmax,1:Nx,1:Ny)  |  kg m<sup>-2</sup>  | Canopy snow mass                           |
+| Tcan(1:Nx,1:Ny)          |  K                  | Canopy air space temperature               |
+| theta(1:Nsoil,1:Nx,1:Ny) |  -                  | Volumetric moisture content of soil layers |
+| Tsnow(1:Nsmax,1:Nx,1:Ny) |  K                  | Snow layer temperatures                    | 
+| Tsoil(1:Nsoil,1:Nx,1:Ny) |  K                  | Soil layer temperatures                    |
+| Tsurf(1:Nx,1:Ny)         |  K                  | Surface skin temperature                   |
+| Tveg(1:Nx,1:Ny)          |  K                  | Vegetation temperature                     |
 
-Snow and soil layers are numbered from the top downwards. File `data/dump.txt` is an example of a dump file produced at the end of a run which could be used to restart the model.
+Snow and soil layers are numbered from the top downwards. The easiest way to generate a start file is to spin up the model by running for a whole number of years without a start file and then rename the dump file produced at the end of the run as a start file for a new run.
 
 ### Output namelist 
 
