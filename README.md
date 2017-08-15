@@ -47,7 +47,7 @@ FSM2 can be run at a point, at a sequence of points or on a rectangular grid by 
 | Dzsnow   | 0.1 0.2 0.4      | m     | Minimum snow layer thicknesses  |
 | Dzsoil   | 0.1 0.2 0.4 0.8  | m     | Soil layer thicknesses          |
 
-Snow and soil layers are numbered from the top downwards. If layer thicknesses are specified in `&gridlevs`, they must match the numbers of layers specfied in `&gridpnts`; this is not checked automatically.
+Snow and soil layers are numbered from the top downwards. If layer thicknesses are specified in `&gridlevs`, they must match the numbers of layers specified in `&gridpnts`; this is not checked automatically.
 
 ### Driving data namelist `&drive` and data files
 
@@ -84,11 +84,11 @@ Meteorological driving data are read from the text file named in namelist `&driv
 | asmx | 0.8  | -    | Maximum albedo for fresh snow                               |
 | asmn | 0.5  | -    | Minimum albedo for melting snow                             |
 | avgs | 0.2  | -    | Snow-covered vegetation albedo                              |
-| bstb | 5    | -    | Atmospheric stability adjustment parameter (if EXCHNG>=1)   |
+| bstb | 5    | -    | Atmospheric stability adjustment parameter (if EXCHNG=1)    |
 | bthr | 2    | -    | Thermal conductivity exponent (if CONDCT=1)                 |
 | gsat | 0.01 | m s<sup>-1</sup>  | Surface conductance for saturated soil         |
 | canc | 4.4  | kg m<sup>-2</sup> | Canopy snow capacity per unit vegetation area  |
-| cmlt | 240  | days | Melting canopy snow unloading time scale <br> (melting now unloads immediately if cmlt < dt)| 
+| cmlt | 240  | days | Melting canopy snow unloading time scale <br> (melting snow unloads immediately if cmlt < dt)| 
 | cunl | 2.4  | days | Cold canopy snow unloading time scale                       | 
 | hfsn | 0.1  | m    | Snow cover fraction depth scale                             |
 | kext | 0.5  | -    | Canopy radiation extinction coefficient                     |
@@ -158,7 +158,7 @@ Soil temperature and moisture content are taken from the namelist and FSM2 is in
 | Tsurf(1:Nx,1:Ny)         |  K                  | Surface skin temperature                   |
 | Tveg(1:Nx,1:Ny)          |  K                  | Vegetation temperature                     |
 
-The easiest way to generate a start file is to spin up the model by running for a whole number of years without a start file and then rename the dump file produced at the end of the run as a start file for a new run.
+The easiest way to generate a start file is to spin up the model by running it for a whole number of years without a start file and then rename the dump file produced at the end of the run as a start file for a new run.
 
 ### Output namelist `&outputs` and output files
 
@@ -168,10 +168,10 @@ Although still simple, FSM2 has more flexible output options than FSM1.
 |-----------|------------|-------------|
 | Nave      | 24         | Number of timesteps in averaged outputs |
 | Nsmp      | 12         | Timestep of sample outputs              |
-| runid     | none       | Run identifier                          |
+| runid     | none       | Run identifier string                   |
 | dump_file | 'dump'     | Dump file name                          |
 
-For the defaults, daily averages and samples at noon will be produced if the driving data has a one-hour timestep and starts at 01:00.
+Flux variable are averaged over Nave timesteps and written to file `ave_*runid*`. State variables are written to file `smp_*runid*` at timestep number Nsmp during every averaging period. For the defaults, daily averages and samples at noon will be produced if the driving data has a one-hour timestep and starts at 01:00. Full timeseries are written if Nave = 1 and Nsmp = 1.
 
 The sample file has 4 + Nx*Ny columns:
 
@@ -185,7 +185,7 @@ The sample file has 4 + Nx*Ny columns:
 | SWE(1:Nx*Ny) | kg m<sup>-2</sup> | Snow water equivalent |
 | Sveg(1:Nx*Ny)| kg m<sup>-2</sup> | Canopy snow mass      |
 
-At the end of a run, the state variables are written to a dump file with the same format as the start file. A metadata file 'runifo_runid' is produce containing copies of all the namelists and the physics options for the run.
+At the end of a run, the state variables are written to a dump file with the same format as the start file. A metadata file `runifo_*runid*` is produce containing copies of all the namelists and the physics options for the run.
  
 
 ## References
