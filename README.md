@@ -1,17 +1,17 @@
 # FSM2
 
-The Factorial Snow Model (FSM) is a multi-physics energy balance model of accumulation and melt of snow on the ground [(Essery, 2015)](#Essery). Version 2 adds forest canopy model options and the possibility of running simulations for more than one point at the same time. In contrast with FSM1, which selects options when it is run, FSM2 options are selected when it is compiled for greater efficiency. FSM2 is built and run in the same way as FSM1.
+The Factorial Snow Model (FSM) is a multi-physics energy balance model of accumulation and melt of snow on the ground [(Essery, 2015)](#Essery2015). Version 2 adds forest canopy model options and the possibility of running simulations for more than one point at the same time. In contrast with FSM1, which selects physics options when it is run, FSM2 options are selected when it is compiled for greater efficiency. Otherwise, FSM2 is built and run in exactly the same way as FSM1.
 
 ## Building the model
 
 FSM2 is coded in Fortran. A linux executable `FSM2` or a Windows executable `FSM2.exe` is produced by running the script `compil.sh` or the batch file `compil.bat`. Both use the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler but could be edited to use other compilers. 
 
-Model options are selected by defining variables in `src/OPTS.h` before compilation
+Physics options are selected by defining variables in file `src/OPTS.h` before compilation
 
 | Variable | Description                  | Options                        |
 |----------|------------------------------|--------------------------------|
 | ALBEDO   | Snow albedo options          | 0 - diagnosed <br> 1 - prognostic     |
-| CANMOD   | Canopy model options         | 0 - zero-layer <br> 1 - one-layer     |
+| CANMOD   | Canopy model options         | 0 - zero-layer <br> 1 - one-layer  <br> 2 - two-layer (to come) |
 | CONDCT   | Thermal conductivity options | 0 - fixed <br> 1 - density function   |
 | DENSTY   | Snow density options         | 0 - fixed <br> 1 - prognostic         |
 | EXCHNG   | Surface exchange options     | 0 - fixed <br> 1 - stability adjusted |
@@ -21,13 +21,13 @@ Model options are selected by defining variables in `src/OPTS.h` before compilat
 
 FSM2 requires meteorological driving data and namelists to set options and parameters. The model is run with the command
 
-    ./FSM2 < nlst.txt
+    ./FSM2 < nlst
 
 or
 
-    FSM2.exe < nlst.txt
+    FSM2.exe < nlst
 
-where `nlst.txt` is a text file containing seven namelists described below; `nlst_CdP_0506.txt` gives an example to run FSM2 for the winter of 2005-2006 at Col de Porte ([Morin et al. 2011](#Morin)). All of the namelists have to be present in the same order as in the example, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
+where `nlst` is a text file containing seven namelists described below; `nlst_Sod_opn_1314.txt` and `nlst_Sod_for_1314.txt` give examples to run FSM2 for the winter of 2013-2014 at Sodankyla, Finland ([Essery et al. 2016](#Essey2016)). All of the namelists have to be present in the same order as in the example, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
 
 ### Grid dimensions namelist `&gridpnts`
 
@@ -53,10 +53,10 @@ Snow and soil layers are numbered from the top downwards. If layer thicknesses a
 
 | Variable | Default | Units | Description |
 |----------|---------|-------|-------------|
-| met_file | 'met.txt' | string  | Driving file name              |
-| dt       | 3600      | s       | Time step                      |
-| zT       | 2         | m       | Temperature measurement height |
-| zU       | 10        | m       | Wind speed measurement height  |
+| met_file | 'met'   | string| Driving file name              |
+| dt       | 3600    | s     | Time step                      |
+| zT       | 2       | m     | Temperature measurement height |
+| zU       | 10      | m     | Wind speed measurement height  |
 
 Measurement heights have to be above the canopy height.
 
@@ -181,16 +181,16 @@ The sample file has 4 + Nx*Ny columns:
 | month    | months | Month of the year |
 | day      | days   | Day of the month  |
 | hour     | hours  | Hour of the day   |
-| snd(1:Nx,1:Ny)    | m                 | Snow depth            |
-| SWE(1:Nx,1:Ny)    | kg m<sup>-2</sup> | Snow water equivalent |
-| Sveg(1:Nx,1:Ny)   | kg m<sup>-2</sup> | Canopy snow mass      |
+| snd(1:Nx*Ny) | m                 | Snow depth            |
+| SWE(1:Nx*Ny) | kg m<sup>-2</sup> | Snow water equivalent |
+| Sveg(1:Nx*Ny)| kg m<sup>-2</sup> | Canopy snow mass      |
 
-At the end of a run, the state variables are written to a dump file with the same format as the start file.
+At the end of a run, the state variables are written to a dump file with the same format as the start file. A metadata file 'runifo_runid' is produce containing copies of all the namelists and the physics options for the run.
  
 
 ## References
 
-<a name="Essery"></a> Essery (2015). A Factorial Snowpack Model (FSM 1.0). *Geoscientific Model Development*, **8**, 3867-3876, [doi:10.5194/gmd-8-3867-2015](http://www.geosci-model-dev.net/8/3867/2015/)
+<a name="Essery2015"></a> Essery (2015). A Factorial Snowpack Model (FSM 1.0). *Geoscientific Model Development*, **8**, 3867-3876, [doi:10.5194/gmd-8-3867-2015](http://www.geosci-model-dev.net/8/3867/2015/)
 
-<a name="Morin"></a> Morin et al. (2012). A 18-yr long (1993-2011) snow and meteorological dataset from a mid-altitude mountain site (Col de Porte, France, 1325 m alt.) for driving and evaluating snowpack models. *Earth System Science Data*, **4**(1), 13-21, [doi:10.5194/essd-4-13-2012](http://www.earth-syst-sci-data.net/4/13/2012/essd-4-13-2012.html)
+<a name="Essery2016"></a> Essery et al. (2016). A 7-year dataset for driving and evaluating snow models at an Arctic site (Sodankylä, Finland). *Geosci. Instrum. Method. Data Syst.*, **5**, 219-227, [doi:10.5194/gi-5-219-2016](https://www.geosci-instrum-method-data-syst.net/5/219/2016/)
 
