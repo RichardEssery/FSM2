@@ -27,7 +27,7 @@ or
 
     FSM2.exe < nlst
 
-where `nlst` is a text file containing seven namelists described below; `nlst_Sod_opn_1314.txt` and `nlst_Sod_for_1314.txt` give examples to run FSM2 for the winter of 2013-2014 at Sodankyla, Finland ([Essery et al. 2016](#Essey2016)). All of the namelists have to be present in the same order as in the example, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
+where `nlst` is a text file containing seven namelists described below; `nlst_Sod_opn_1314.txt` and `nlst_Sod_for_1314.txt` give examples to run FSM2 for open and forest sites at Sodankylä, Finland over the winter of 2013-2014 ([Essery et al. 2016](#Essery2016)). All of the namelists have to be present in the same order as in the examples, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
 
 ### Grid dimensions namelist `&gridpnts`
 
@@ -60,7 +60,7 @@ Snow and soil layers are numbered from the top downwards. If layer thicknesses a
 
 Measurement heights have to be above the canopy height.
 
-Meteorological driving data are read from the text file named in namelist `&drive`. A driving data file has 12 columns containing the variables listed in the table below. Each row of the file corresponds with a timestep. Driving data for the Col de Porte example are given in file `data/met_CdP_0506.txt`.
+Meteorological driving data are read from the text file named in namelist `&drive`. For simulations at a point or for a set of nearby points with common meteorology, FSM2 uses the same driving data format as FSM1 with 12 columns containing the variables listed in the table below. Each row of the file corresponds with a timestep. Driving data for the Sodankylä examples are given in file `data/met_Sod_1314.txt`.
 
 | Variable | Units  | Description       |
 |----------|--------|-------------------|
@@ -81,29 +81,29 @@ Meteorological driving data are read from the text file named in namelist `&driv
 
 | Variable | Default | Units | Description |
 |----------|---------|-------|-------------|
-| asmx | 0.8  | -    | Maximum albedo for fresh snow                                   |
-| asmn | 0.5  | -    | Minimum albedo for melting snow                                 |
-| avgs | 0.2  | -    | Snow-covered vegetation albedo                                  |
-| bstb | 5    | -    | Atmospheric stability adjustment parameter (if n<sub>e</sub>=1) |
-| bthr | 2    | -    | Thermal conductivity exponent (if n<sub>c</sub>=1)              |
-| gsat | 0.01 | m s<sup>-1</sup>  | Surface conductance for saturated soil             |
-| canc | 4.4  | kg m<sup>-2</sup> | Canopy snow capacity per unit vegetation area      |
-| cmlt | 240  | days | Melting canopy snow unloading time scale                        | 
-| cunl | 2.4  | days | Cold canopy snow unloading time scale                           | 
-| hfsn | 0.1  | m    | Snow cover fraction depth scale                                 |
-| kext | 0.5  | -    | Canopy radiation extinction coefficient                         |
-| kfix | 0.24 | W m<sup>-1</sup> K<sup>-1</sup> | Fixed thermal conductivity (if n<sub>c</sub>=0) |
-| rho0 | 300  | kg m<sup>-3</sup> | Fixed snow density (if n<sub>d</sub>=0)               |
-| rhof | 100  | kg m<sup>-3</sup> | Fresh snow density (if n<sub>d</sub>=1)               |
-| rcld | 300  | kg m<sup>-3</sup> | Maximum density for cold snow (if n<sub>d</sub>=1)    |
-| rmlt | 500  | kg m<sup>-3</sup> | Maximum density for melting snow (if n<sub>d</sub>=1) |
-| Salb | 10   | kg m<sup>-2</sup> | Snowfall to refresh albedo (if n<sub>a</sub>=1)       |
-| Talb | -2   | &deg;C| Albedo decay temperature threshold (if n<sub>a</sub>=0)           |
-| tcld | 1000 | h    | Cold snow albedo decay time scale (if n<sub>a</sub>=1)             |
-| tmlt | 100  | h    | Melting snow albedo decay time scale (if n<sub>a</sub>=1)          |
-| trho | 200  | h    | Compaction time scale (if n<sub>d</sub>=1)                         |
-| Wirr | 0.03 | -    | Irreducible liquid water content (if n<sub>w</sub>=1)              |
-| z0sn | 0.01 | m    | Snow roughness length                                              |
+| asmx | 0.8  | -    | Maximum albedo for fresh snow                               |
+| asmn | 0.5  | -    | Minimum albedo for melting snow                             |
+| avgs | 0.2  | -    | Snow-covered vegetation albedo                              |
+| bstb | 5    | -    | Atmospheric stability adjustment parameter (if EXCHNG>=1)   |
+| bthr | 2    | -    | Thermal conductivity exponent (if CONDCT=1)                 |
+| gsat | 0.01 | m s<sup>-1</sup>  | Surface conductance for saturated soil         |
+| canc | 4.4  | kg m<sup>-2</sup> | Canopy snow capacity per unit vegetation area  |
+| cmlt | 240  | days | Melting canopy snow unloading time scale <br> (melting now unloads immediately if cmlt < dt)| 
+| cunl | 2.4  | days | Cold canopy snow unloading time scale                       | 
+| hfsn | 0.1  | m    | Snow cover fraction depth scale                             |
+| kext | 0.5  | -    | Canopy radiation extinction coefficient                     |
+| kfix | 0.24 | W m<sup>-1</sup> K<sup>-1</sup> | Fixed thermal conductivity (if CONDCT=0)|
+| rho0 | 300  | kg m<sup>-3</sup> | Fixed snow density (if DENSTY=0)               |
+| rhof | 100  | kg m<sup>-3</sup> | Fresh snow density (if DENSTY=1)               |
+| rcld | 300  | kg m<sup>-3</sup> | Maximum density for cold snow (if DENSTY=1)    |
+| rmlt | 500  | kg m<sup>-3</sup> | Maximum density for melting snow (if DENSTY=1) |
+| Salb | 10   | kg m<sup>-2</sup> | Snowfall to refresh albedo (if ALBEDO=1)       |
+| Talb | -2   | &deg;C| Albedo decay temperature threshold (if ALBEDO=0)           |
+| tcld | 1000 | h    | Cold snow albedo decay time scale (if ALBEDO=1)             |
+| tmlt | 100  | h    | Melting snow albedo decay time scale (if ALBEDO=1)          |
+| trho | 200  | h    | Compaction time scale (if DENSTY=1)                         |
+| Wirr | 0.03 | -    | Irreducible liquid water content (if HYDROL=1)              |
+| z0sn | 0.01 | m    | Snow roughness length                                       |
 
 ### Site characteristics namelist `&maps` and map files
 
