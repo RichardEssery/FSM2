@@ -20,10 +20,8 @@ Physics and driving data options are selected by defining variables in file `src
 
 | Option  | Description                  | Possible choices                      |
 |---------|------------------------------|---------------------------------------|
-| DRIV1D  | 1D driving data format       | 0 - FSM format <br> 
-                                           1 - ESM-SnowMIP format                | 
-| SWPART  | SW radiation partition       | 0 - Total SW radiation used <br> 
-                                           1 - Diffuse and direct SW calculated  | 
+| DRIV1D  | 1D driving data format       | 0 - FSM format <br> 1 - ESM-SnowMIP format | 
+| SWPART  | SW radiation partition       | 0 - Total SW radiation used <br> 1 - Diffuse and direct SW calculated | 
 
 
 ## Running the model
@@ -96,8 +94,7 @@ For simulations at a point or for a set of nearby points with common meteorology
 | gsat | 0.01 | m s<sup>-1</sup>  | Surface conductance for saturated soil         |
 | canc | 4.4  | kg m<sup>-2</sup> | Canopy snow capacity per unit vegetation area  |
 | cunc | 240  | hours| Canopy unloading time scale for cold snow                   | 
-| cunm | 2.4  | hours| Canopy unloading time scale for melting snow <br> 
-                       (unloads immediately if cmlt < dt)                          | 
+| cunm | 2.4  | hours| Canopy unloading time scale for melting snow <br> (unloads immediately if cmlt < dt) | 
 | hfsn | 0.1  | m    | Snow cover fraction depth scale                             |
 | kext | 0.5  | -    | Canopy radiation extinction coefficient                     |
 | kfix | 0.24 | W m<sup>-1</sup> K<sup>-1</sup> | Fixed thermal conductivity (if CONDCT=0)|
@@ -183,7 +180,7 @@ Although still simple, FSM2 has more flexible output options than FSM.
 
 Flux variable are averaged over Nave timesteps and written to file `ave_runid`. State variables are written to file `smp_runid` at timestep number Nsmp during every averaging period. For the defaults, daily averages and samples at noon will be produced if the driving data has a one-hour timestep and starts at 01:00. Full timeseries are written if Nave = 1 and Nsmp = 1.
 
-The sample file has 4 + 3*Nx*Ny columns:
+The sample file has 4 + 3NxNy columns:
 
 | Variable       | Units              | Description           |
 |----------------|--------------------|-----------------------|
@@ -196,7 +193,7 @@ The sample file has 4 + 3*Nx*Ny columns:
 | Sveg(1:Nx*Ny)  | kg m<sup>-2</sup>  | Canopy snow mass      |
 
 
-The average file has 3 + 7*Nx*Ny columns:
+The average file has 3 + 7NxNy columns:
 
 | Variable       | Units              | Description           |
 |----------------|--------------------|-----------------------|
