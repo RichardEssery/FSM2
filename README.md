@@ -1,21 +1,30 @@
 # FSM2
 
-The Factorial Snow Model (FSM) is a multi-physics energy balance model of accumulation and melt of snow on the ground [(Essery, 2015)](#Essery2015). Version 2 adds forest canopy model options and the possibility of running simulations for more than one point at the same time. In contrast with FSM1, which selects physics options when it is run, FSM2 options are selected when it is compiled for greater efficiency. Otherwise, FSM2 is built and run in exactly the same way as FSM1.
+The Flexible Snow Model (FSM2) is a multi-physics energy balance model of snow accumulation and melt, extending the Factorial Snow Model [(Essery, 2015)](#Essery2015) with additional physics, driving and output options. FSM2 adds forest canopy model options and the possibility of running simulations for more than one point at the same time. In contrast with FSM, which selects physics options when it is run, FSM2 options are selected when compiled for greater efficiency. Otherwise, FSM2 is built and run in the same way as FSM.
 
 ## Building the model
 
-FSM2 is coded in Fortran. A linux executable `FSM2` or a Windows executable `FSM2.exe` is produced by running the script `compil.sh` or the batch file `compil.bat`. Both use the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler but could be edited to use other compilers. 
+FSM2 is coded in Fortran. An executable `FSM2` is produced using the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler by running the linux script `compil.sh`.
 
-Physics options are selected by defining variables in file `src/OPTS.h` before compilation
+Physics and driving data options are selected by defining variables in file `src/OPTS.h` before compilation
 
-| Variable | Description                  | Options                        |
-|----------|------------------------------|--------------------------------|
-| ALBEDO   | Snow albedo options          | 0 - diagnosed <br> 1 - prognostic     |
-| CANMOD   | Canopy model options         | 0 - zero-layer <br> 1 - one-layer  <br> 2 - two-layer (to come) |
-| CONDCT   | Thermal conductivity options | 0 - fixed <br> 1 - density function   |
-| DENSTY   | Snow density options         | 0 - fixed <br> 1 - prognostic         |
-| EXCHNG   | Surface exchange options     | 0 - fixed <br> 1 - stability adjusted |
-| HYDROL   | Snow hydrology options       | 0 - free draining <br> 1 - bucket     | 
+| Option  | Description                  | Possible choices                      |
+|---------|------------------------------|---------------------------------------|
+| ALBEDO  | Snow albedo options          | 0 - diagnostic <br> 1 - prognostic    |
+| CANMOD  | Canopy model options         | 0 - zero layer <br> 1 - one layer     |
+| CONDCT  | Thermal conductivity options | 0 - fixed <br> 1 - density function   |
+| DENSTY  | Snow density options         | 0 - fixed <br> 1 - prognostic         |
+| EXCHNG  | Surface exchange options     | 0 - fixed <br> 1 - stability adjusted |
+| HYDROL  | Snow hydrology options       | 0 - free draining <br> 1 - bucket     | 
+
+
+| Option  | Description                  | Possible choices                      |
+|---------|------------------------------|---------------------------------------|
+| DRIV1D  | 1D driving data format       | 0 - FSM format <br> 
+                                           1 - ESM-SnowMIP format                | 
+| SWPART  | SW radiation partition       | 0 - Total SW radiation used <br> 
+                                           1 - Diffuse and direct SW calculated  | 
+
 
 ## Running the model
 
@@ -23,11 +32,7 @@ FSM2 requires meteorological driving data and namelists to set options and param
 
     ./FSM2 < nlst
 
-or
-
-    FSM2.exe < nlst
-
-where `nlst` is a text file containing seven namelists described below; `nlst_Sod_opn_1314.txt` and `nlst_Sod_for_1314.txt` give examples to run FSM2 for open and forest sites at Sodankylä, Finland over the winter of 2013-2014 ([Essery et al. 2016](#Essery2016)). All of the namelists have to be present in the same order as in the examples, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
+where `nlst` is a text file containing eight namelists described below. All of the namelists have to be present in the same order as in the examples, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
 
 ### Grid dimensions namelist `&gridpnts`
 
@@ -51,31 +56,33 @@ Snow and soil layers are numbered from the top downwards. If layer thicknesses a
 
 ### Driving data namelist `&drive` and data files
 
-| Variable | Default | Units | Description |
-|----------|---------|-------|-------------|
-| met_file | 'met'   | string| Driving file name              |
-| dt       | 3600    | s     | Time step                      |
-| zT       | 2       | m     | Temperature measurement height |
-| zU       | 10      | m     | Wind speed measurement height  |
+| Variable | Default | Units   | Description                    |
+|----------|---------|---------|--------------------------------|
+| met_file | 'met'   | string  | Driving file name              |
+| dt       | 3600    | s       | Time step                      |
+| lat      | 0       | degrees | Latitude                       |
+| noon     | 0       | hours   | Local offset from solar noon   |
+| zT       | 2       | m       | Temperature measurement height |
+| zU       | 10      | m       | Wind speed measurement height  |
 
 Measurement heights have to be above the canopy height.
 
-Meteorological driving data are read from the text file named in namelist `&drive`. For simulations at a point or for a set of nearby points with common meteorology, FSM2 uses the same driving data format as FSM1 with 12 columns containing the variables listed in the table below. Each row of the file corresponds with a timestep. Driving data for the Sodankylä examples are given in file `data/met_Sod_1314.txt`.
+For simulations at a point or for a set of nearby points with common meteorology, 1D driving data are read from the text file named in namelist `&drive`. The file should have 12 columns containing the variables listed in the table below. Each row of the file corresponds with a timestep.
 
-| Variable | Units  | Description       |
-|----------|--------|-------------------|
-| year     | years  | Year              |
-| month    | months | Month of the year |
-| day      | days   | Day of the month  |
-| hour     | hours  | Hour of the day   |
-| SW       | W m<sup>-2</sup> | Incoming shortwave radiation  |
-| LW       | W m<sup>-2</sup> | Incoming longwave radiation   |
-| Sf       | kg m<sup>-2</sup> s<sup>-1</sup> | Snowfall rate |
-| Rf       | kg m<sup>-2</sup> s<sup>-1</sup> | Rainfall rate |
-| Ta       | K      | Air temperature      |
-| RH       | RH     | Relative humidity    |
-| Ua       | m s<sup>-1</sup> | Wind speed |
-| Ps       | Pa     | Surface air pressure |
+| Variable | Units  | Description                                    |
+|----------|--------|------------------------------------------------|
+| year     | years  | Year                                           |
+| month    | months | Month of the year                              |
+| day      | days   | Day of the month                               |
+| hour     | hours  | Hour of the day                                |
+| SW       | W m<sup>-2</sup> | Incoming shortwave radiation         |
+| LW       | W m<sup>-2</sup> | Incoming longwave radiation          |
+| Sf       | kg m<sup>-2</sup> s<sup>-1</sup> | Snowfall rate        |
+| Rf       | kg m<sup>-2</sup> s<sup>-1</sup> | Rainfall rate        |
+| Ta       | K      | Air temperature                                |
+| RH       | RH     | Relative humidity                              |
+| Ua       | m s<sup>-1</sup> | Wind speed                           |
+| Ps       | Pa     | Surface air pressure                           |
 
 ### Parameter namelist `&params`
 
@@ -88,8 +95,9 @@ Meteorological driving data are read from the text file named in namelist `&driv
 | bthr | 2    | -    | Thermal conductivity exponent (if CONDCT=1)                 |
 | gsat | 0.01 | m s<sup>-1</sup>  | Surface conductance for saturated soil         |
 | canc | 4.4  | kg m<sup>-2</sup> | Canopy snow capacity per unit vegetation area  |
-| cmlt | 240  | days | Melting canopy snow unloading time scale <br> (melting snow unloads immediately if cmlt < dt)| 
-| cunl | 2.4  | days | Cold canopy snow unloading time scale                       | 
+| cunc | 240  | hours| Canopy unloading time scale for cold snow                   | 
+| cunm | 2.4  | hours| Canopy unloading time scale for melting snow <br> 
+                       (unloads immediately if cmlt < dt)                          | 
 | hfsn | 0.1  | m    | Snow cover fraction depth scale                             |
 | kext | 0.5  | -    | Canopy radiation extinction coefficient                     |
 | kfix | 0.24 | W m<sup>-1</sup> K<sup>-1</sup> | Fixed thermal conductivity (if CONDCT=0)|
@@ -109,14 +117,16 @@ Meteorological driving data are read from the text file named in namelist `&driv
 
 | Variable | Default | Units | Description |
 |----------|---------|-------|-------------|
-| alb0 | 0.2  | -    | Snow-free ground albedo                                         |
-| fcly | 0.3  | -    | Soil clay fraction                                              |
-| fsnd | 0.6  | -    | Soil sand fraction                                              |
-| fsky | exp(-kext*VAI) | -    | Sky view fraction                                     |
-| hcan | 0    | m    | Canopy height                                                   |
-| scap | canc*VAI    | kg m<sup>-2</sup> | Canopy snow capacity                        |
-| VAI  | 0    | -    | Vegetation area index                                           |
-| z0sf | 0.1  | m    | Snow-free roughness length                                      |
+| alb0     | 0.2     | -     | Snow-free ground albedo                             |
+| canh     | 2500*VAI| J/K/m<sup>-2</sup> | Canopy heat capacity (if CANMOD=1)     |
+| fcly     | 0.3     | -     | Soil clay fraction                                  |
+| fsnd     | 0.6     | -     | Soil sand fraction                                  |
+| fsky     |     exp(-kext*VAI) | -    | Sky view fraction                         |
+| fveg     | 1 - exp(-kext*VAI) | -    | Canopy cover fraction                     |
+| hcan     | 0       | m     | Canopy height                                       |
+| scap     | canc*VAI| kg m<sup>-2</sup> | Canopy snow capacity                    |
+| VAI      | 0       | -     | Vegetation area index                               |
+| z0sf     | 0.1     | m     | Snow-free roughness length                          |
 
 Site characteristics can either be left as default values, set to a sequence of values in the namelist or read from a named map file. e.g. for a simulation with 10 points, the snow-free ground albedo can be reset to a constant value of 0.1 by including
 
@@ -162,7 +172,7 @@ The easiest way to generate a start file is to spin up the model by running it f
 
 ### Output namelist `&outputs` and output files
 
-Although still simple, FSM2 has more flexible output options than FSM1. 
+Although still simple, FSM2 has more flexible output options than FSM. 
 
 | Variable  | Default    | Description |
 |-----------|------------|-------------|
@@ -171,21 +181,37 @@ Although still simple, FSM2 has more flexible output options than FSM1.
 | runid     | none       | Run identifier string                   |
 | dump_file | 'dump'     | Dump file name                          |
 
-Flux variable are averaged over Nave timesteps and written to file `ave_*runid*`. State variables are written to file `smp_*runid*` at timestep number Nsmp during every averaging period. For the defaults, daily averages and samples at noon will be produced if the driving data has a one-hour timestep and starts at 01:00. Full timeseries are written if Nave = 1 and Nsmp = 1.
+Flux variable are averaged over Nave timesteps and written to file `ave_runid`. State variables are written to file `smp_runid` at timestep number Nsmp during every averaging period. For the defaults, daily averages and samples at noon will be produced if the driving data has a one-hour timestep and starts at 01:00. Full timeseries are written if Nave = 1 and Nsmp = 1.
 
-The sample file has 4 + Nx*Ny columns:
+The sample file has 4 + 3*Nx*Ny columns:
 
-| Variable | Units  | Description       |
-|----------|--------|-------------------|
-| year     | years  | Year              |
-| month    | months | Month of the year |
-| day      | days   | Day of the month  |
-| hour     | hours  | Hour of the day   |
-| snd(1:Nx*Ny) | m                 | Snow depth            |
-| SWE(1:Nx*Ny) | kg m<sup>-2</sup> | Snow water equivalent |
-| Sveg(1:Nx*Ny)| kg m<sup>-2</sup> | Canopy snow mass      |
+| Variable       | Units              | Description           |
+|----------------|--------------------|-----------------------|
+| year           | years              | Year                  |
+| month          | months             | Month of the year     |
+| day            | days               | Day of the month      |
+| hour           | hours              | Hour of the day       |
+| snd(1:Nx*Ny)   | m                  | Snow depth            |
+| SWE(1:Nx*Ny)   | kg m<sup>-2</sup>  | Snow water equivalent |
+| Sveg(1:Nx*Ny)  | kg m<sup>-2</sup>  | Canopy snow mass      |
 
-At the end of a run, the state variables are written to a dump file with the same format as the start file. A metadata file `runifo_*runid*` is produce containing copies of all the namelists and the physics options for the run.
+
+The average file has 3 + 7*Nx*Ny columns:
+
+| Variable       | Units              | Description           |
+|----------------|--------------------|-----------------------|
+| year           | years              | Year                  |
+| month          | months             | Month of the year     |
+| day            | days               | Day of the month      |
+| Gsurf(1:Nx*Ny) | W m <sup>-2</sup>  | Ground heat flux      |
+| Hatmo(1:Nx*Ny) | W m <sup>-2</sup>  | Sensible heat flux    |
+| Latmo(1:Nx*Ny) | W m <sup>-2</sup>  | Latent heat flux      |
+| Melt(1:Nx*Ny)  | kg m <sup>-2</sup> | Cumulated melt        |
+| Roff(1:Nx*Ny)  | kg m <sup>-2</sup> | Cumulated runoff      |
+| Tsurf(1:Nx*Ny) | C                  | Surface temperature   |
+| Tsoil(1:Nx*Ny) | C                  | 20 cm soil temperature|
+
+At the end of a run, the state variables are written to a dump file with the same format as the start file. A metadata file `runifo_runid` is produce containing copies of all the namelists and the physics options for the run.
  
 
 ## References
