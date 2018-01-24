@@ -1,0 +1,96 @@
+ ##################################
+ #                                #
+ # Flexible Snow Model FSM 2.0    #
+ #                                #
+ ##################################
+
+ Run at 17:39 15/ 1/2018
+
+ PHYSICS OPTIONS
+ snow albedo        prognostic
+ canopy model       zero layer
+ snow conductivity  Yen (1981)
+ snow density       Verseghy (1991)
+ turbulent exchange Louis (1979)
+ snow hydraulics    bucket
+
+ NAMELISTS
+&DRIVE
+ MET_FILE="data_wrapper/met_wrapper.txt                                          ",
+ DT=  3600.00000    ,
+ LAT=  0.00000000    ,
+ NOON=  0.00000000    ,
+ ZT=  2.00000000    ,
+ ZU=  10.0000000    ,
+ /
+&GRIDPNTS
+ NSMAX=          3,
+ NSOIL=          4,
+ NX=          1,
+ NY=          1,
+ /
+&GRIDLEVS
+ DZSNOW= 0.100000001    , 0.200000003    , 0.400000006    ,
+ DZSOIL= 0.100000001    , 0.200000003    , 0.400000006    , 0.800000012    ,
+ /
+&MAPS
+ ALB0= 0.200000003    ,
+ CANH=  0.00000000    ,
+ FCLY= 0.300000012    ,
+ FSND= 0.600000024    ,
+ FSKY=  1.00000000    ,
+ FVEG=  0.00000000    ,
+ HCAN=  0.00000000    ,
+ SCAP=  0.00000000    ,
+ VAI=  0.00000000    ,
+ Z0SF= 0.100000001    ,
+ ALB0_FILE="none                                                                  ",
+ CANH_FILE="none                                                                  ",
+ FCLY_FILE="none                                                                  ",
+ FSND_FILE="none                                                                  ",
+ FSKY_FILE="none                                                                  ",
+ FVEG_FILE="none                                                                  ",
+ HCAN_FILE="none                                                                  ",
+ SCAP_FILE="none                                                                  ",
+ VAI_FILE="none                                                                  ",
+ Z0SF_FILE="none                                                                  ",
+ /
+&PARAMS
+ ASMX= 0.800000012    ,
+ ASMN= 0.500000000    ,
+ AVG0= 0.100000001    ,
+ AVGS= 0.400000006    ,
+ BSTB=  5.00000000    ,
+ BTHR=  2.00000000    ,
+ CANC=  4.40000010    ,
+ CUNC=  864000.000    ,
+ CUNM=  8640.00000    ,
+ GSAT=  9.99999978E-03,
+ HFSN= 0.100000001    ,
+ KEXT= 0.500000000    ,
+ KFIX= 0.239999995    ,
+ RHO0=  300.000000    ,
+ RHOF=  100.000000    ,
+ RCLD=  300.000000    ,
+ RMLT=  500.000000    ,
+ SALB=  10.0000000    ,
+ TALB= -2.00000000    ,
+ TCLD=  3600000.00    ,
+ TMLT=  360000.000    ,
+ TRHO=  720000.000    ,
+ WIRR=  2.99999993E-02,
+ Z0SN=  9.99999978E-03,
+ /
+&INITIAL
+ FSAT= 4*0.500000000     ,
+ TPROF= 4*285.000000      ,
+ START_FILE="none                                                                  ",
+ /
+&OUTPUTS
+ NAVE=         24,
+ NSMP=         12,
+ AVE_FILE="ave                                                                   ",
+ DMP_FILE="dump                                                                  ",
+ SMP_FILE="smp                                                                   ",
+ RUNID="_test                                                                 ",
+ /
