@@ -376,14 +376,14 @@ read(5, outputs)
 if (runid == 'none') then
   runid = ''
 else
-  runid = '_' // runid
+  runid = runid // '_'
 endif
-open(uave, file = trim(ave_file) // trim(runid))
-open(udmp, file = trim(dmp_file) // trim(runid))
-open(usmp, file = trim(smp_file) // trim(runid))
+open(uave, file = trim(runid) // trim(ave_file))
+open(udmp, file = trim(runid) // trim(dmp_file))
+open(usmp, file = trim(runid) // trim(smp_file))
 
 ! Write options and namelists to metadata file
-open(umta, file = 'runinfo' // trim(runid))
+open(umta, file = trim(runid) // 'runinfo')
 write(umta,*) '##################################'
 write(umta,*) '#                                #'
 write(umta,*) '# Flexible Snow Model FSM 2.0    #'
