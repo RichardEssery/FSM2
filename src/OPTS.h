@@ -1,5 +1,5 @@
 #define ALBEDO 1
-#define CANMOD 0
+#define CANMOD 1
 #define CONDCT 1
 #define DENSTY 1
 #define EXCHNG 1

@@ -4,9 +4,7 @@ The Flexible Snow Model (FSM2) is a multi-physics energy balance model of snow a
 
 ## Building the model
 
-FSM2 is coded in Fortran. An executable `FSM2` is produced using the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler by running the linux script `compil.sh`.
-
-Physics and driving data options are selected by defining variables in file `src/OPTS.h` before compilation
+FSM2 is coded in Fortran. An executable `FSM2` is produced using the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler by running the linux script `compil.sh`. Physics and driving data options are selected by defining variables in file `src/OPTS.h` before compilation
 
 | Option  | Description                  | Possible choices                      |
 |---------|------------------------------|---------------------------------------|
@@ -30,7 +28,7 @@ FSM2 requires meteorological driving data and namelists to set options and param
 
     ./FSM2 < nlst
 
-where `nlst` is a text file containing eight namelists described below. All of the namelists have to be present in the same order as in the examples, but any or all of the namelist variables listed in the tables below can be omitted; defaults are then used.
+where `nlst` is a text file containing eight namelists described below. All of the namelists have to be present in the order given below, but any or all of the namelist variables listed in the tables can be omitted; defaults are then used.
 
 ### Grid dimensions namelist `&gridpnts`
 
@@ -178,9 +176,9 @@ Although still simple, FSM2 has more flexible output options than FSM.
 | runid     | none       | Run identifier string                   |
 | dump_file | 'dump'     | Dump file name                          |
 
-Flux variable are averaged over Nave timesteps and written to file `ave_runid`. State variables are written to file `smp_runid` at timestep number Nsmp during every averaging period. For the defaults, daily averages and samples at noon will be produced if the driving data has a one-hour timestep and starts at 01:00. Full timeseries are written if Nave = 1 and Nsmp = 1.
+Flux variable are averaged over Nave timesteps and written to file `ave`, and state variables are written to file `smp` at timestep number Nsmp during every averaging period. For the default output frequencies, daily averages and samples at noon will be produced if the driving data has a one-hour timestep and starts at 01:00. Full timeseries are written if Nave = 1 and Nsmp = 1. At the end of a run, the state variables are written to a dump file with the same format as the start file. A run identifier, if specified, is prefixed on all output file names. If the run identifier includes a directory name (e.g. runid = 'output/'), the directory has to exist before the model is run.
 
-The sample file has 4 + 3NxNy columns:
+The sample file has 4 + 3N x Ny columns:
 
 | Variable       | Units              | Description           |
 |----------------|--------------------|-----------------------|
@@ -193,7 +191,7 @@ The sample file has 4 + 3NxNy columns:
 | Sveg(1:Nx*Ny)  | kg m<sup>-2</sup>  | Canopy snow mass      |
 
 
-The average file has 3 + 7NxNy columns:
+The average file has 3 + 7N x Ny columns:
 
 | Variable       | Units              | Description           |
 |----------------|--------------------|-----------------------|
@@ -208,7 +206,7 @@ The average file has 3 + 7NxNy columns:
 | Tsurf(1:Nx*Ny) | C                  | Surface temperature   |
 | Tsoil(1:Nx*Ny) | C                  | 20 cm soil temperature|
 
-At the end of a run, the state variables are written to a dump file with the same format as the start file. A metadata file `runifo_runid` is produce containing copies of all the namelists and the physics options for the run.
+A metadata file `runifo` is produce containing copies of all the namelists and the physics options for the run.
  
 
 ## References
