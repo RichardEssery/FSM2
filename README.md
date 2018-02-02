@@ -4,7 +4,7 @@ The Flexible Snow Model (FSM2) is a multi-physics energy balance model of snow a
 
 ## Building the model
 
-FSM2 is coded in Fortran. An executable `FSM2` is produced using the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler by running the linux script `compil.sh`. Physics and driving data options are selected by defining variables in file `src/OPTS.h` before compilation
+FSM2 is coded in Fortran. A linux executable `FSM2` or a Windows executable `FSM2.exe`is produced  by running the script `compil.sh` or the batch file `compil.bat`. Both use the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler but could be edited to use other compilers. Physics and driving data options are selected by defining variables in file `src/OPTS.h` before compilation
 
 | Option  | Description                  | Possible choices                      |
 |---------|------------------------------|---------------------------------------|
@@ -27,6 +27,10 @@ FSM2 is coded in Fortran. An executable `FSM2` is produced using the [gfortran](
 FSM2 requires meteorological driving data and namelists to set options and parameters. The model is run with the command
 
     ./FSM2 < nlst
+
+or
+
+    .FSM2.exe < nlst
 
 where `nlst` is a text file containing eight namelists described below. All of the namelists have to be present in the order given below, but any or all of the namelist variables listed in the tables can be omitted; defaults are then used.
 
