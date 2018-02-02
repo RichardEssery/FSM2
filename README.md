@@ -30,7 +30,7 @@ FSM2 requires meteorological driving data and namelists to set options and param
 
 or
 
-    .FSM2.exe < nlst
+    FSM2.exe < nlst
 
 where `nlst` is a text file containing eight namelists described below. All of the namelists have to be present in the order given below, but any or all of the namelist variables listed in the tables can be omitted; defaults are then used.
 
