@@ -4,8 +4,9 @@ The Flexible Snow Model (FSM2) is a multi-physics energy balance model of snow a
 
 ## Building the model
 
-FSM2 is coded in Fortran. A linux executable `FSM2` or a Windows executable `FSM2.exe`is produced  by running the script `compil.sh` or the batch file `compil.bat`. Both use the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler but could be edited to use other compilers. Physics and driving data options are selected by defining variables in file `src/OPTS.h` before compilation
+FSM2 is coded in Fortran. A linux executable `FSM2` or a Windows executable `FSM2.exe`is produced  by running the script `compil.sh` or the batch file `compil.bat`. Both use the [gfortran](https://gcc.gnu.org/wiki/GFortran) compiler but could be edited to use other compilers. Physics and driving data configurations are selected in the compilation script by defining options that are copied to a preprocessor file `src/OPTS.h` before compilation.
 
+### Physics options
 | Option  | Description                  | Possible choices                      |
 |---------|------------------------------|---------------------------------------|
 | ALBEDO  | Snow albedo options          | 0 - diagnostic <br> 1 - prognostic    |
@@ -15,7 +16,7 @@ FSM2 is coded in Fortran. A linux executable `FSM2` or a Windows executable `FSM
 | EXCHNG  | Surface exchange options     | 0 - fixed <br> 1 - stability adjusted |
 | HYDROL  | Snow hydrology options       | 0 - free draining <br> 1 - bucket     | 
 
-
+### Driving data options
 | Option  | Description                  | Possible choices                      |
 |---------|------------------------------|---------------------------------------|
 | DRIV1D  | 1D driving data format       | 0 - FSM format <br> 1 - ESM-SnowMIP format | 
