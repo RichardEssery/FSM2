@@ -60,15 +60,22 @@ use PARAMETERS, only: &
   canc,              &! Canopy snow capacity per unit LAI (kg/m^2)
   cunc,              &! Canopy unloading time scale for cold snow (s)
   cunm,              &! Canopy unloading time scale for melting snow (s)
+  eta0,              &! Reference snow viscosity (Pa s)
+  etaa,              &! Snow viscosity parameter (1/K)
+  etab,              &! Snow viscosity parameter (m^3/kg)
   gsat,              &! Surface conductance for saturated soil (m/s)
   hfsn,              &! Snow cover fraction depth scale (m)
   kext,              &! Canopy radiation extinction coefficient
   kfix,              &! Thermal conductivity at fixed snow density (W/m/K)
   rho0,              &! Fixed snow density (kg/m^3)
+  rhoc,              &! Critical snow density (kg/m^3)
   rhof,              &! Fresh snow density (kg/m^3)
   rcld,              &! Maximum density for cold snow (kg/m^3)
   rmlt,              &! Maximum density for melting snow (kg/m^3)
   Salb,              &! Snowfall to refresh albedo (kg/m^2)
+  snda,              &! Snow densification parameter (1/s)
+  sndb,              &! Snow densification parameter (1/K)
+  sndc,              &! Snow densification parameter (m^3/kg)
   Talb,              &! Albedo decay temperature threshold (C)
   tcld,              &! Cold snow albedo decay time scale (s)
   tmlt,              &! Melting snow albedo decay time scale (s)
@@ -153,8 +160,9 @@ namelist /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,VAI,z0sf,  &
                 alb0_file,canh_file,fcly_file,fsnd_file,fsky_file, &
                 fveg_file,hcan_file,scap_file,VAI_file,z0sf_file 
 namelist /outputs/ Nave,Nsmp,ave_file,dmp_file,smp_file,runid
-namelist /params/ asmx,asmn,avg0,avgs,bstb,bthr,canc,cunc,cunm,gsat,hfsn,kext,kfix,  &
-                  rho0,rhof,rcld,rmlt,Salb,Talb,tcld,tmlt,trho,Wirr,z0sn
+namelist /params/ asmx,asmn,avg0,avgs,bstb,bthr,canc,cunc,cunm,eta0,etaa,etab,gsat,hfsn,  &
+                  kext,kfix,rho0,rhoc,rhof,rcld,rmlt,Salb,snda,sndb,sndc,Talb,tcld,tmlt,  &
+                  trho,Wirr,z0sn
 
 ! Grid parameters
 Nx = 1
@@ -200,13 +208,20 @@ asmx = 0.8
 asmn = 0.5
 bstb = 5
 bthr = 2
+eta0 = 3.7e7
+etaa = 0.081
+etab = 0.018
 hfsn = 0.1
 kfix = 0.24
 rho0 = 300
+rhoc = 150
 rhof = 100
 rcld = 300
 rmlt = 500
 Salb = 10
+snda = 2.8e-6
+sndb = 0.042
+sndc = 0.046
 Talb = -2
 tcld = 1000
 tmlt = 100
@@ -398,6 +413,8 @@ open(usmp, file = trim(runid) // trim(smp_file))
 #define DENSTY_OPT 'constant'
 #elif DENSTY == 1
 #define DENSTY_OPT 'Verseghy (1991)'
+#elif DENSTY == 2
+#define DENSTY_OPT 'Anderson (1976)'
 #endif
 #if EXCHNG == 0
 #define EXCHNG_OPT 'constant'

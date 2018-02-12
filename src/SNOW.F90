@@ -6,6 +6,7 @@ subroutine SNOW(Esurf,Gsurf,ksnow,ksoil,Melt,Gsoil,Roff)
 #include "OPTS.h"
  
 use CONSTANTS, only: &
+  g,                 &! Acceleration due to gravity (m/s^2)
   hcap_ice,          &! Specific heat capacity of ice (J/K/kg)
   hcap_wat,          &! Specific heat capacity of water (J/K/kg)
   Lf,                &! Latent heat of fusion (J/kg)
@@ -27,10 +28,17 @@ use GRID, only: &
   Nx,Ny               ! Grid dimensions
 
 use PARAMETERS, only: &
+  eta0,              &! Reference snow viscosity (Pa s)
+  etaa,              &! Snow viscosity parameter (1/K)
+  etab,              &! Snow viscosity parameter (m^3/kg)
   rho0,              &! Fixed snow density (kg/m^3)
+  rhoc,              &! Critical snow density (kg/m^3)
   rhof,              &! Fresh snow density (kg/m^3)
   rcld,              &! Maximum density for cold snow (kg/m^3)
   rmlt,              &! Maximum density for melting snow (kg/m^3)
+  snda,              &! Snow densification parameter (1/s)
+  sndb,              &! Snow densification parameter (1/K)
+  sndc,              &! Snow densification parameter (m^3/kg)
   trho,              &! Snow compaction timescale (s)
   Wirr                ! Irreducible liquid water content of snow
 
@@ -68,6 +76,7 @@ real :: &
   dnew,              &! New snow layer thickness (m)
   dSice,             &! Change in layer ice content (kg/m^2)
   Esnow,             &! Snow sublimation rate (kg/m^2/s)
+  mass,              &! Mass of overlying snow (kg/m^2)
   phi,               &! Porosity
   rhos,              &! Density of snow layer (kg/m^3)
   SliqMax,           &! Maximum liquid content for layer (kg/m^2)
@@ -222,6 +231,20 @@ do i = 1, Nx
         end if
         Ds(k,i,j) = (Sice(k,i,j) + Sliq(k,i,j)) / rhos
       end if
+    end do
+#endif
+#if DENSTY == 2
+  ! Anderson (1976) prognostic snow density
+    mass = 0
+    do k = 1, Nsnow(i,j)
+      mass = mass + 0.5*(Sice(k,i,j) + Sliq(k,i,j)) 
+      if (Ds(k,i,j) > epsilon(Ds)) then
+        rhos = (Sice(k,i,j) + Sliq(k,i,j)) / Ds(k,i,j)
+        rhos = rhos + (rhos*g*mass*dt/eta0)*exp(-etaa*(Tm - Tsnow(k,i,j)) - etab*rhos)  &
+                    + dt*rhos*snda*exp(-sndb*(Tm - Tsnow(k,i,j)) - sndc*max(rhos - 150, 0.))
+        Ds(k,i,j) = (Sice(k,i,j) + Sliq(k,i,j)) / rhos
+      end if
+      mass = mass + 0.5*(Sice(k,i,j) + Sliq(k,i,j))
     end do
 #endif
 

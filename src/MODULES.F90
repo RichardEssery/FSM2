@@ -96,6 +96,9 @@ integer, parameter :: &
   ustr = 71           ! Start file unit number
 end module IOUNITS
 
+!-----------------------------------------------------------------------
+! Parameters
+!-----------------------------------------------------------------------
 module PARAMETERS
 ! Vegetation parameters
 real :: &
@@ -111,13 +114,20 @@ real :: &
   asmn,              &! Minimum albedo for melting snow
   bstb,              &! Stability slope parameter
   bthr,              &! Snow thermal conductivity exponent
+  eta0,              &! Reference snow viscosity (Pa s)
+  etaa,              &! Snow viscosity parameter (1/K)
+  etab,              &! Snow viscosity parameter (m^3/kg)
   hfsn,              &! Snowcover fraction depth scale (m)
   kfix,              &! Fixed thermal conductivity of snow (W/m/K)
   rho0,              &! Fixed snow density (kg/m^3)
+  rhoc,              &! Critical snow density (kg/m^3)
   rhof,              &! Fresh snow density (kg/m^3)
   rcld,              &! Maximum density for cold snow (kg/m^3)
   rmlt,              &! Maximum density for melting snow (kg/m^3)
   Salb,              &! Snowfall to refresh albedo (kg/m^2)
+  snda,              &! Snow densification parameter (1/s)
+  sndb,              &! Snow densification parameter (1/K)
+  sndc,              &! Snow densification parameter (m^3/kg)
   Talb,              &! Albedo decay temperature threshold (C)
   tcld,              &! Cold snow albedo decay time scale (s)
   tmlt,              &! Melting snow albedo decay time scale (s)
