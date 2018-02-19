@@ -95,7 +95,6 @@ real :: &
   Rsurf,             &! Net radiation absorbed by the surface (W/m^2)
   Rveg                ! Net radiation absorbed by vegetation (W/m^2)model
 
-
 #if CANMOD == 0
 ! 0-layer canopy 
 do j = 1, Ny

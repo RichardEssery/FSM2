@@ -46,11 +46,17 @@ real :: &
   Rnet(Nx,Ny),       &! Net radiation (W/m^2)
   Roff(Nx,Ny),       &! Runoff from snow (kg/m^2)
   SWsurf(Nx,Ny),     &! Net SW radiation absorbed by the surface (W/m^2)
-  SWveg(Nx,Ny)        ! Net SW radiation absorbed by vegetation (W/m^2)
+  SWveg(Nx,Ny),      &! Net SW radiation absorbed by vegetation (W/m^2)
+  unload(Nx,Ny)       ! Snow mass unloaded from canopy (kg/m^2)
+
+integer :: & 
+  n                   ! Iteration counter
 
 call SWRAD(alb,fsnow,SWsurf,SWveg)
 
 call THERMAL(csoil,Dz1,gevap,ksnow,ksoil,ksurf,Ts1)
+
+do n = 1, 1
 
 call SFEXCH(fsnow,KH,KHsurf,KHveg)
 
@@ -59,9 +65,11 @@ call EBALFOR(Dz1,gevap,KH,KHsurf,KHveg,ksurf,SWsurf,SWveg,Ts1, &
 
 call EBALOPN(Dz1,gevap,KH,ksurf,SWsurf,Ts1,Esurf,Gsurf,Hatmo,Latmo,Melt,Rnet)
 
-call CANOPY(Eveg)
+end do
 
-call SNOW(Esurf,Gsurf,ksnow,ksoil,Melt,Gsoil,Roff)
+call CANOPY(Eveg,unload)
+
+call SNOW(Esurf,Gsurf,ksnow,ksoil,Melt,unload,Gsoil,Roff)
 
 call SOIL(csoil,Gsoil,ksoil)
 

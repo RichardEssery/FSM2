@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Canopy snow
 !-----------------------------------------------------------------------
-subroutine CANOPY(Eveg)
+subroutine CANOPY(Eveg,unload)
 
 use CONSTANTS, only: &
   Tm                  ! Melting point (K)
@@ -30,6 +30,9 @@ implicit none
 real, intent(in) :: &
   Eveg(Nx,Ny)         ! Moisture flux from vegetation (kg/m^2/s)
 
+real, intent(out) :: &
+  unload(Nx,Ny)       ! Snow mass unloaded from canopy (kg/m^2)
+
 real :: &
   cant,              &! Canopy snow unloading timescale (s)
   intcpt,            &! Canopy interception (kg/m^2)
@@ -40,16 +43,14 @@ integer :: &
 
 do j = 1, Ny
 do i = 1, Nx
+  unload(i,j) = 0
   if (fveg(i,j) > 0) then
 
   ! interception
     intcpt = (scap(i,j) - Sveg(i,j))*(1 - exp(-fveg(i,j)*Sf(i,j)*dt/scap(i,j)))
+    intcpt = min(intcpt, scap(i,j) - Sveg(i,j))
     Sveg(i,j) = Sveg(i,j) + intcpt
     Sf(i,j) = Sf(i,j) - intcpt/dt
-    if (Sveg(i,j) > scap(i,j)) then
-      Sf(i,j) = Sf(i,j) + (Sveg(i,j) - scap(i,j))/dt
-      Sveg(i,j) = scap(i,j)
-    end if
 
   ! sublimation
     Evegs = 0
@@ -60,9 +61,9 @@ do i = 1, Nx
   ! unloading
     cant = cunc
     if (Tveg(i,j) >= Tm) cant = cunm
-    Sf(i,j) = Sf(i,j) + Sveg(i,j)/cant
-    Sveg(i,j) = (1 - dt/cant)*Sveg(i,j)
-    Sveg(i,j) = max(Sveg(i,j), 0.)
+    cant = max(cant, dt)
+    unload(i,j) = Sveg(i,j)*dt/cant
+    Sveg(i,j) = Sveg(i,j) - unload(i,j)
 
   end if
 end do

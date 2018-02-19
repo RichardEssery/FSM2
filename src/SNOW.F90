@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Snow thermodynamics and hydrology
 !-----------------------------------------------------------------------
-subroutine SNOW(Esurf,Gsurf,ksnow,ksoil,Melt,Gsoil,Roff)
+subroutine SNOW(Esurf,Gsurf,ksnow,ksoil,Melt,unload,Gsoil,Roff)
 
 #include "OPTS.h"
  
@@ -56,9 +56,10 @@ implicit none
 real, intent(in) :: &
   Esurf(Nx,Ny),      &! Moisture flux from the surface (kg/m^2/s)
   Gsurf(Nx,Ny),      &! Heat flux into surface (W/m^2)
-  Melt(Nx,Ny),       &! Surface melt rate (kg/m^2/s)
   ksnow(Nsmax,Nx,Ny),&! Thermal conductivity of snow (W/m/K)
-  ksoil(Nsoil,Nx,Ny)  ! Thermal conductivity of soil (W/m/K)
+  ksoil(Nsoil,Nx,Ny),&! Thermal conductivity of soil (W/m/K)
+  Melt(Nx,Ny),       &! Surface melt rate (kg/m^2/s)
+  unload(Nx,Ny)       ! Snow mass unloaded from canopy (kg/m^2)
 
 real, intent(out) :: &
   Gsoil(Nx,Ny),      &! Heat flux into soil (W/m^2)
@@ -256,24 +257,27 @@ end do
 do j = 1, Ny
 do i = 1, Nx
 
-! Add snowfall and frost to layer 1
+! Add snowfall and frost to layer 1 with fresh snow density
   Esnow = 0
   if (Esurf(i,j) < 0 .and. Tsurf(i,j) < Tm) Esnow = Esurf(i,j)
   dSice = (Sf(i,j) - Esnow)*dt
   Ds(1,i,j) = Ds(1,i,j) + dSice / rhof
   Sice(1,i,j) = Sice(1,i,j) + dSice
 
+! Add canopy unloading to layer 1 with bulk snow density
+  rhos = rhof
+  mass = sum(Sice(:,i,j)) + sum(Sliq(:,i,j))
+  snowdepth = sum(Ds(:,i,j))
+  if (snowdepth > snowdepth) rhos = mass / snowdepth
+  Ds(1,i,j) = Ds(1,i,j) + unload(i,j) / rhos
+  Sice(1,i,j) = Sice(1,i,j) + unload(i,j)
+
 ! New snowpack
   if (Nsnow(i,j) == 0 .and. Sice(1,i,j) > 0) then
     Nsnow(i,j) = 1
     Tsnow(1,i,j) = min(Ta(i,j), Tm)
   end if
-
-! Calculate new snow depth
-  snowdepth = 0
-  do k = 1, Nsnow(i,j)
-    snowdepth = snowdepth + Ds(k,i,j)
-  end do
+  snowdepth = sum(Ds(:,i,j))
 
 ! Store state of old layers
   D(:) = Ds(:,i,j)
