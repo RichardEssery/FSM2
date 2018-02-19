@@ -97,7 +97,7 @@ For simulations at a point or for a set of nearby points with common meteorology
 | gsat | 0.01 | m s<sup>-1</sup>  | Surface conductance for saturated soil         |
 | canc | 4.4  | kg m<sup>-2</sup> | Canopy snow capacity per unit vegetation area  |
 | cunc | 240  | hours| Canopy unloading time scale for cold snow                   | 
-| cunm | 2.4  | hours| Canopy unloading time scale for melting snow <br> (unloads immediately if cmlt < dt) | 
+| cunm | 2.4  | hours| Canopy unloading time scale for melting snow <br> (immediate unloading if < dt) | 
 | eta0 | 3.7e7| Pa s                      | Reference snow viscosity (if DENSTY=2) |
 | etaa | 0.081| K<sup>-1</sup>            | Snow viscosity parameter (if DENSTY=2) |
 | etab | 0.018| m<sup>3</sup>kg<sup>-1</sup> | Snow viscosity parameter (if DENSTY=2) |
@@ -184,7 +184,7 @@ Although still simple, FSM2 has more flexible output options than FSM.
 | Variable  | Default    | Description |
 |-----------|------------|-------------|
 | Nave      | 24         | Number of timesteps in averaged outputs |
-| Nsmp      | 12         | Timestep of sample outputs              |
+| Nsmp      | 12         | Timestep of sample outputs, <= Nave     |
 | runid     | none       | Run identifier string                   |
 | dump_file | 'dump'     | Dump file name                          |
 
@@ -210,10 +210,12 @@ The average file has 3 + 7Nx*Ny columns:
 | year           | years              | Year                  |
 | month          | months             | Month of the year     |
 | day            | days               | Day of the month      |
+| alb(1:Nx*Ny)   | -                  | Flux-weighted albedo  |
 | Gsurf(1:Nx*Ny) | W m <sup>-2</sup>  | Ground heat flux      |
 | Hatmo(1:Nx*Ny) | W m <sup>-2</sup>  | Sensible heat flux    |
 | Latmo(1:Nx*Ny) | W m <sup>-2</sup>  | Latent heat flux      |
 | Melt(1:Nx*Ny)  | kg m <sup>-2</sup> | Cumulated melt        |
+| Rnet(1:Nx*Ny)  | W m <sup>-2</sup>  | Net radiation         |
 | Roff(1:Nx*Ny)  | kg m <sup>-2</sup> | Cumulated runoff      |
 | Tsurf(1:Nx*Ny) | C                  | Surface temperature   |
 | Tsoil(1:Nx*Ny) | C                  | 20 cm soil temperature|
