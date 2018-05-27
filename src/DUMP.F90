@@ -18,7 +18,7 @@ use STATE_VARIABLES, only : &
   theta,             &! Volumetric moisture content of soil layers
   Tsnow,             &! Snow layer temperatures (K)
   Tsoil,             &! Soil layer temperatures (K)
-  Tsurf,             &! Surface skin temperature (K)
+  Tsrf,              &! Surface skin temperature (K)
   Tveg                ! Vegetation temperature (K)
 
 implicit none
@@ -34,7 +34,7 @@ write(udmp,*) Tcan(:,:)
 write(udmp,*) theta(:,:,:)
 write(udmp,*) Tsnow(:,:,:)
 write(udmp,*) Tsoil(:,:,:)
-write(udmp,*) Tsurf(:,:)
+write(udmp,*) Tsrf(:,:)
 write(udmp,*) Tveg(:,:)
 close(udmp)
 

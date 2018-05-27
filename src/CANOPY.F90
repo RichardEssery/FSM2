@@ -1,5 +1,5 @@
 !-----------------------------------------------------------------------
-! Canopy snow
+! Mass baance of canopy snow
 !-----------------------------------------------------------------------
 subroutine CANOPY(Eveg,unload)
 
@@ -14,8 +14,8 @@ use GRID, only: &
   Nx,Ny               ! Grid dimensions
 
 use PARAMETERS, only: &
-  cunc,              &! Canopy unloading time scale for cold snow (s)
-  cunm                ! Canopy unloading time scale for melting snow (s)
+  tcnc,              &! Canopy unloading time scale for cold snow (s)
+  tcnm                ! Canopy unloading time scale for melting snow (s)
 
 use PARAMMAPS, only: &
   fveg,              &! Canopy cover fraction
@@ -34,9 +34,9 @@ real, intent(out) :: &
   unload(Nx,Ny)       ! Snow mass unloaded from canopy (kg/m^2)
 
 real :: &
-  cant,              &! Canopy snow unloading timescale (s)
   intcpt,            &! Canopy interception (kg/m^2)
-  Evegs               ! Canopy snow sublimation rate (kg/m^2/s)
+  Evegs,             &! Canopy snow sublimation rate (kg/m^2/s)
+  tcan                ! Canopy snow unloading timescale (s)
 
 integer :: & 
   i,j                 ! Grid coordinates
@@ -48,7 +48,6 @@ do i = 1, Nx
 
   ! interception
     intcpt = (scap(i,j) - Sveg(i,j))*(1 - exp(-fveg(i,j)*Sf(i,j)*dt/scap(i,j)))
-    intcpt = min(intcpt, scap(i,j) - Sveg(i,j))
     Sveg(i,j) = Sveg(i,j) + intcpt
     Sf(i,j) = Sf(i,j) - intcpt/dt
 
@@ -59,10 +58,10 @@ do i = 1, Nx
     Sveg(i,j) = max(Sveg(i,j), 0.)
 
   ! unloading
-    cant = cunc
-    if (Tveg(i,j) >= Tm) cant = cunm
-    cant = max(cant, dt)
-    unload(i,j) = Sveg(i,j)*dt/cant
+    tcan = tcnc
+    if (Tveg(i,j) >= Tm) tcan = tcnm
+    tcan = max(tcan, dt)
+    unload(i,j) = Sveg(i,j)*dt/tcan
     Sveg(i,j) = Sveg(i,j) - unload(i,j)
 
   end if

@@ -1,17 +1,17 @@
 !-----------------------------------------------------------------------
-! Solve surface energy balance for forested points
+! Surface and forest canopy energy balance
 !-----------------------------------------------------------------------
-subroutine EBALFOR(Dz1,gevap,KH,KHsurf,KHveg,ksurf,SWsurf,SWveg,Ts1, &
-                   Esurf,Eveg,Gsurf,Hatmo,Latmo,Melt,Rnet)
+subroutine EBALFOR(Ds1,KHa,KHg,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1,Tveg0, &
+                   Esrf,Eveg,G,H,LE,Melt,Rnet)
 
 #include "OPTS.h"
 
 use CONSTANTS, only : &
   cp,                &! Specific heat capacity of air (J/K/kg)
-  Lc,                &! Latent heat of condensation (J/kg)
   Lf,                &! Latent heat of fusion (J/kg)
   Ls,                &! Latent heat of sublimation (J/kg)
-  Rgas,              &! Gas constant for dry air (J/K/kg)
+  Lv,                &! Latent heat of vapourisation (J/kg)
+  Rair,              &! Gas constant for air (J/K/kg)
   Rwat,              &! Gas constant for water vapour (J/K/kg)
   sb,                &! Stefan-Boltzmann constant (W/m^2/K^4)
   Tm                  ! Melting point (K)
@@ -29,36 +29,37 @@ use GRID, only: &
 use PARAMMAPS, only: &
   canh,              &! Canopy heat capacity (J/K/m^2)
   fsky,              &! Sky view fraction
-  fveg,              &! Canopy cover fraction
-  scap                ! Canopy snow capacity (kg/m^2)
+  fveg                ! Canopy cover fraction
 
 use STATE_VARIABLES, only : &
   Qcan,              &! Canopy air space humidity
   Sveg,              &! Snow mass on vegetation (kg/m^2)
   Sice,              &! Ice content of snow layers (kg/m^2)
   Tcan,              &! Canopy air space temperature (K)
-  Tsurf,             &! Surface temperature (K)
+  Tsrf,              &! Surface temperature (K)
   Tveg                ! Vegetation temperature (K)
 
 implicit none
 
 real, intent(in) :: &
-  Dz1(Nx,Ny),        &! Surface layer thickness (m)
-  gevap(Nx,Ny),      &! Surface moisture conductance (m/s)
-  KH(Nx,Ny),         &! Eddy diffusivity for heat fluxes (m/s)
-  KHsurf(Nx,Ny),     &! Surface eddy diffusivity (m/s)
-  KHveg(Nx,Ny),      &! Vegetation eddy diffusivity (m/s)
-  ksurf(Nx,Ny),      &! Surface layer thermal conductivity (W/m/K)
-  SWsurf(Nx,Ny),     &! Net SW radiation absorbed by the surface (W/m^2)
+  Ds1(Nx,Ny),        &! Surface layer thickness (m)
+  KHa(Nx,Ny),        &! Eddy diffusivity from the canopy air space (m/s)
+  KHg(Nx,Ny),        &! Eddy diffusivity for heat from the ground (m/s)
+  KHv(Nx,Ny),        &! Eddy diffusivity for heat from vegetation (m/s)
+  KWg(Nx,Ny),        &! Eddy diffusivity for water from the ground (m/s)
+  KWv(Nx,Ny),        &! Eddy diffusivity for water from vegetation (m/s)
+  ks1(Nx,Ny),        &! Surface layer thermal conductivity (W/m/K)
+  SWsrf(Nx,Ny),      &! Net SW radiation absorbed by the surface (W/m^2)
   SWveg(Nx,Ny),      &! Net SW radiation absorbed by vegetation (W/m^2)
-  Ts1(Nx,Ny)          ! Surface layer temperature (K)
+  Ts1(Nx,Ny),        &! Surface layer temperature (K)
+  Tveg0(Nx,Ny)        ! Vegetation temperature at start of timestep (K)
 
 real, intent(out) :: &
-  Esurf(Nx,Ny),      &! Moisture flux from the surface (kg/m^2/s)
+  Esrf(Nx,Ny),       &! Moisture flux from the surface (kg/m^2/s)
   Eveg(Nx,Ny),       &! Moisture flux from vegetation (kg/m^2/s)
-  Gsurf(Nx,Ny),      &! Heat flux into surface (W/m^2)
-  Hatmo(Nx,Ny),      &! Sensible heat flux to the atmosphere (W/m^2)
-  Latmo(Nx,Ny),      &! Latent heat flux to the atmosphere (W/m^2)
+  G(Nx,Ny),          &! Heat flux into surface (W/m^2)
+  H(Nx,Ny),          &! Sensible heat flux to the atmosphere (W/m^2)
+  LE(Nx,Ny),         &! Latent heat flux to the atmosphere (W/m^2)
   Melt(Nx,Ny),       &! Surface melt rate (kg/m^2/s)
   Rnet(Nx,Ny)         ! Net radiation (W/m^2)
 
@@ -66,12 +67,12 @@ integer :: &
   i,j                 ! Point counters
 
 real :: &
-  A(4,4),            &! Matrix of coefficients
-  b(4),              &! Vector of residuals
-  x(4)                ! Solution of matrix equation
+  A(4,4),            &! Jacobian of energy and mass balance equations
+  b(4),              &! Residuals of energy and mass balance equations
+  x(4)                ! Temperature and humidity increments
 
 real :: &
-  Dsurf,             &! dQsat/dT at surface temperature (1/K)
+  Dsrf,              &! dQsat/dT at surface temperature (1/K)
   Dveg,              &! dQsat/dT at vegetation temperature (1/K)
   dEs,               &! Change in surface moisture flux (kg/m^2/s)
   dEv,               &! Change in vegetation moisture flux (kg/m^2/s)
@@ -82,96 +83,17 @@ real :: &
   dTc,               &! Change in canopy air temperature (K)
   dTs,               &! Change in surface temperature (K)
   dTv,               &! Change in vegetation temperature (K)
-  Eatmo,             &! Moisture flux to the atmosphere (kg/m^2/s)
-  Hsurf,             &! Sensible heat flux from the surface (W/m^2)
+  E,                 &! Moisture flux to the atmosphere (kg/m^2/s)
+  Hsrf,              &! Sensible heat flux from the surface (W/m^2)
   Hveg,              &! Sensible heat flux from vegetation (W/m^2)
-  Lsurf,             &! Latent heat for phase change on the ground (J/kg)
+  Lsrf,              &! Latent heat for phase change on the ground (J/kg)
   Lveg,              &! Latent heat for phase change on vegetation (J/kg)
-  psis,              &! Surface moisture availability factor
-  psiv,              &! Canopy moisture availability factor
-  Qsurf,             &! Saturation humidity at surface temperature
+  Qsrf,              &! Saturation humidity at surface temperature
   Qveg,              &! Saturation humidity at vegetation temperature
   rho,               &! Air density (kg/m^3)
-  Rsurf,             &! Net radiation absorbed by the surface (W/m^2)
-  Rveg                ! Net radiation absorbed by vegetation (W/m^2)model
-
-#if CANMOD == 0
-! 0-layer canopy 
-do j = 1, Ny
-do i = 1, Nx
-  if (fveg(i,j) > 0) then
-
-    Tveg(i,j) = Ta(i,j) 
-
-  ! Saturation humidity, moisture availability and air density
-    call QSAT(Ps(i,j),Tsurf(i,j),Qsurf)
-    Lsurf = Ls
-    if (Tsurf(i,j) > Tm) Lsurf = Lc
-    Dsurf = Lsurf*Qsurf / (Rwat*Tsurf(i,j)**2)
-    psis = gevap(i,j) / (gevap(i,j) + KH(i,j))
-    if (Qsurf < Qa(i,j) .or. Sice(1,i,j) > 0) psis = 1
-    call QSAT(Ps(i,j),Tveg(i,j),Qveg)
-    Lveg = Ls
-    if (Tveg(i,j) > Tm) Lveg = Lc
-    psiv = Sveg(i,j) / Scap(i,j)
-    if (Qveg < Qa(i,j) .or. psiv > 1) psiv = 1
-    rho = Ps(i,j) / (Rgas*Ta(i,j))
-
-  ! Explicit fluxes
-    Esurf(i,j) = psis*rho*KH(i,j)*(Qsurf - Qa(i,j))
-    Eveg(i,j)  = psiv*rho*KH(i,j)*(Qveg - Qa(i,j))
-    Gsurf(i,j) = 2*ksurf(i,j)*(Tsurf(i,j) - Ts1(i,j))/Dz1(i,j)
-    Hatmo(i,j) = cp*rho*KH(i,j)*(Tsurf(i,j) - Ta(i,j))
-    Latmo(i,j) = Lsurf*Esurf(i,j)
-    Melt(i,j) = 0
-    Rsurf = SWsurf(i,j) + fsky(i,j)*LW(i,j) - sb*Tsurf(i,j)**4  &
-                        + (1 - fsky(i,j))*sb*Tveg(i,j)**4
-
-  ! Surface energy balance increments without melt
-    dTs = (Rsurf - Hatmo(i,j) - Latmo(i,j) - Gsurf(i,j)) /  &
-          ((cp + Lsurf*psis*Dsurf)*rho*KH(i,j) + 2*ksurf(i,j)/Dz1(i,j) + 4*sb*Tsurf(i,j)**3)
-    dEs = psis*rho*KH(i,j)*Dsurf*dTs
-    dGs = 2*ksurf(i,j)*dTs/Dz1(i,j)
-    dHs = cp*rho*KH(i,j)*dTs
-
-  ! Surface melting
-    if (Tsurf(i,j) + dTs > Tm .and. Sice(1,i,j) > 0) then
-      Melt(i,j) = sum(Sice(:,i,j))/dt
-      dTs = (Rsurf - Hatmo(i,j) - Latmo(i,j) - Gsurf(i,j) - Lf*Melt(i,j)) /  &
-            ((cp + Ls*Dsurf)*rho*KH(i,j) + 2*ksurf(i,j)/Dz1(i,j) + 4*sb*Tsurf(i,j)**3)
-      dEs = rho*KH(i,j)*Dsurf*dTs
-      dGs = 2*ksurf(i,j)*dTs/Dz1(i,j)
-      dHs = cp*rho*KH(i,j)*dTs
-      if (Tsurf(i,j) + dTs < Tm) then
-        call QSAT(Ps(i,j),Tm,Qsurf)
-        Esurf(i,j) = rho*KH(i,j)*(Qsurf - Qa(i,j))  
-        Gsurf(i,j) = 2*ksurf(i,j)*(Tm - Ts1(i,j))/Dz1(i,j)
-        Hatmo(i,j) = cp*rho*KH(i,j)*(Tm - Ta(i,j))
-        Latmo(i,j) = Ls*Esurf(i,j)
-        Rsurf = SWsurf(i,j) + fsky(i,j)*LW(i,j) - sb*Tm**4  &
-                            + (1 - fsky(i,j))*sb*Tveg(i,j)**4
-        Melt(i,j) = (Rsurf - Hatmo(i,j) - Latmo(i,j) - Gsurf(i,j)) / Lf
-        Melt(i,j) = max(Melt(i,j), 0.)
-        dEs = 0
-        dGs = 0
-        dHs = 0
-        dTs = Tm - Tsurf(i,j)
-      end if
-    end if
-
-  ! Update surface temperature and fluxes
-    Tsurf(i,j) = Tsurf(i,j) + dTs
-    Esurf(i,j) = Esurf(i,j) + dEs
-    Gsurf(i,j) = Gsurf(i,j) + dGs
-    Hatmo(i,j) = Hatmo(i,j) + dHs
-    Latmo(i,j) = Lsurf*Esurf(i,j) + Lveg*Eveg(i,j)
-    Rnet(i,j) = SWsurf(i,j) + SWveg(i,j) + LW(i,j) - fsky(i,j)*sb*Tsurf(i,j)**4  &
-                            - (1 - fsky(i,j))*sb*Tveg(i,j)**4
-
-  end if
-end do
-end do
-#endif
+  Rsrf,              &! Net radiation absorbed by the surface (W/m^2)
+  Rveg,              &! Net radiation absorbed by vegetation (W/m^2)model
+  Ssub                ! Mass of snow available for sublimation (kg/m^2)
 
 #if CANMOD == 1
 ! 1-layer canopy model
@@ -179,122 +101,123 @@ do j = 1, Ny
 do i = 1, Nx
   if (fveg(i,j) > 0) then
 
-  ! Saturation humidity, moisture availability and air density
-  call QSAT(Ps(i,j),Tsurf(i,j),Qsurf)
-  Lsurf = Ls
-  if (Tsurf(i,j) > Tm) Lsurf = Lc
-  Dsurf = Lsurf*Qsurf / (Rwat*Tsurf(i,j)**2)
-  psis = gevap(i,j) / (KHsurf(i,j) + gevap(i,j))
-  if (Qsurf < Qcan(i,j) .or. Sice(1,i,j) > 0) psis = 1
-  call QSAT(Ps(i,j),Tveg(i,j),Qveg)
-  Lveg = Ls
-  if (Tveg(i,j) > Tm) Lveg = Lc
-  Dveg = Lveg*Qveg / (Rwat*Tveg(i,j)**2)
-  psiv = Sveg(i,j) / Scap(i,j)
-  if (Qveg < Qa(i,j) .or. psiv > 1) psiv = 1
-  rho = Ps(i,j) / (Rgas*Ta(i,j))
+    ! Saturation humidity and density of air
+    call QSAT(Ps(i,j),Tsrf(i,j),Qsrf)
+    Lsrf = Ls
+    if (Tsrf(i,j) > Tm) Lsrf = Lv
+    Dsrf = Lsrf*Qsrf / (Rwat*Tsrf(i,j)**2)
+    call QSAT(Ps(i,j),Tveg(i,j),Qveg)
+    Lveg = Ls
+    if (Tveg(i,j) > Tm) Lveg = Lv
+    Dveg = Lveg*Qveg / (Rwat*Tveg(i,j)**2)
+    rho = Ps(i,j) / (Rair*Ta(i,j))
 
-  ! Explicit fluxes
-  Eatmo = rho*KH(i,j)*(Qcan(i,j) - Qa(i,j))
-  Esurf(i,j) = psis*rho*KHsurf(i,j)*(Qsurf - Qcan(i,j))
-  Eveg(i,j) = psiv*rho*KHveg(i,j)*(Qveg - Qcan(i,j))
-  Gsurf(i,j) = 2*ksurf(i,j)*(Tsurf(i,j) - Ts1(i,j))/Dz1(i,j)
-  Hatmo(i,j) = rho*cp*KH(i,j)*(Tcan(i,j) - Ta(i,j))
-  Hsurf = rho*cp*KHsurf(i,j)*(Tsurf(i,j) - Tcan(i,j))
-  Hveg = rho*cp*KHveg(i,j)*(Tveg(i,j) - Tcan(i,j))
-  Latmo(i,j) = Lsurf*Esurf(i,j) + Lveg*Eveg(i,j)
-  Melt(i,j) = 0
-  Rsurf = SWsurf(i,j) + fsky(i,j)*LW(i,j) - sb*Tsurf(i,j)**4 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
-  Rveg = SWveg(i,j) + (1 - fsky(i,j))*(LW(i,j) + sb*Tsurf(i,j)**4 - 2*sb*Tveg(i,j)**4) 
+    ! Explicit fluxes
+    E = rho*KHa(i,j)*(Qcan(i,j) - Qa(i,j))
+    Esrf(i,j) = rho*KWg(i,j)*(Qsrf - Qcan(i,j))
+    Eveg(i,j) = rho*KWv(i,j)*(Qveg - Qcan(i,j))
+    G(i,j) = 2*ks1(i,j)*(Tsrf(i,j) - Ts1(i,j))/Ds1(i,j)
+    H(i,j) = rho*cp*KHa(i,j)*(Tcan(i,j) - Ta(i,j))
+    Hsrf = rho*cp*KHg(i,j)*(Tsrf(i,j) - Tcan(i,j))
+    Hveg = rho*cp*KHv(i,j)*(Tveg(i,j) - Tcan(i,j))
+    LE(i,j) = Lsrf*Esrf(i,j) + Lveg*Eveg(i,j)
+    Melt(i,j) = 0
+    Rsrf = SWsrf(i,j) + fsky(i,j)*LW(i,j) - sb*Tsrf(i,j)**4 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
+    Rveg = SWveg(i,j) + (1 - fsky(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4) 
 
-  ! Surface energy balance increments without melt
-  A(1,1) = 0
-  A(1,2) = - (KH(i,j) + KHveg(i,j) + KHsurf(i,j))
-  A(1,3) = KHsurf(i,j)
-  A(1,4) = KHveg(i,j)
-  b(1)   = (Hatmo(i,j) - Hveg - Hsurf) / (rho*cp)
-  A(2,1) = - (KH(i,j) + psiv*KHveg(i,j) + psis*KHsurf(i,j))
-  A(2,2) = 0
-  A(2,3) = psis*Dsurf*KHsurf(i,j)
-  A(2,4) = psiv*Dveg*KHveg(i,j)
-  b(2)   = (Eatmo - Eveg(i,j) - Esurf(i,j)) / rho
-  A(3,1) = - Lsurf*psis*rho*KHsurf(i,j)
-  A(3,2) = - rho*cp*KHsurf(i,j)
-  A(3,3) = (cp + Lsurf*psis*Dsurf)*rho*KHsurf(i,j) + 4*sb*Tsurf(i,j)**3 + 2*ksurf(i,j)/Dz1(i,j)
-  A(3,4) = - 4*(1 - fsky(i,j))*sb*Tveg(i,j)**3
-  b(3)   = Rsurf - Hsurf - Lsurf*Esurf(i,j) - Gsurf(i,j)
-  A(4,1) = - Lveg*psiv*rho*KHveg(i,j)
-  A(4,2) = - rho*cp*KHveg(i,j)
-  A(4,3) = -4*(1 - fsky(i,j))*sb*Tsurf(i,j)**3
-  A(4,4) = canh(i,j)/dt + (cp + Lveg*psiv*Dveg)*rho*KHveg(i,j) + 8*(1 - fsky(i,j))*sb*Tveg(i,j)**3
-  b(4)   = Rveg - Hveg - Lveg*Eveg(i,j)
-  call LUDCMP(4,A,b,x)
-  dQc = x(1)
-  dTc = x(2)
-  dTs = x(3)
-  dTv = x(4)
-  dEs = psis*rho*KHsurf(i,j)*(Dsurf*dTs - dQc)
-  dEv = psiv*rho*KHveg(i,j)*(Dveg*dTs - dQc)
-  dGs = 2*ksurf(i,j)*dTs/Dz1(i,j)
-  dHs = rho*cp*KHsurf(i,j)*(dTs - dTc)
-  dHv = rho*cp*KHveg(i,j)*(dTv - dTc)
-
-  ! Surface melting
-  if (Tsurf(i,j) + dTs > Tm .and. Sice(1,i,j) > 0) then
-    Melt(i,j) = sum(Sice(:,i,j)) / dt
-    b(3) = Rsurf - Hsurf - Lsurf*Esurf(i,j) - Gsurf(i,j) - Lf*Melt(i,j)
+    ! Surface energy balance increments without melt
+    A(1,1) = 0
+    A(1,2) = - (KHa(i,j) + KHv(i,j) + KHg(i,j))
+    A(1,3) = KHg(i,j)
+    A(1,4) = KHv(i,j)
+    b(1)   = (H(i,j) - Hveg - Hsrf) / (rho*cp)
+    A(2,1) = - (KHa(i,j) + KWv(i,j) + KWg(i,j))
+    A(2,2) = 0
+    A(2,3) = Dsrf*KWg(i,j)
+    A(2,4) = Dveg*KWv(i,j)
+    b(2)   = (E - Eveg(i,j) - Esrf(i,j)) / rho
+    A(3,1) = - Lsrf*rho*KWg(i,j)
+    A(3,2) = - rho*cp*KHg(i,j)
+    A(3,3) = rho*(cp*KHg(i,j) + Lsrf*Dsrf*KWg(i,j)) + 4*sb*Tsrf(i,j)**3 + 2*ks1(i,j)/Ds1(i,j)
+    A(3,4) = - 4*(1 - fsky(i,j))*sb*Tveg(i,j)**3
+    b(3)   = Rsrf - Hsrf - Lsrf*Esrf(i,j) - G(i,j)
+    A(4,1) = - Lveg*rho*KWv(i,j)
+    A(4,2) = - rho*cp*KHv(i,j)
+    A(4,3) = -4*(1 - fsky(i,j))*sb*Tsrf(i,j)**3
+    A(4,4) = canh(i,j)/dt + rho*(cp*KHv(i,j) + Lveg*Dveg*KWv(i,j)) + 8*(1 - fsky(i,j))*sb*Tveg(i,j)**3
+    b(4)   = Rveg - Hveg - Lveg*Eveg(i,j) - canh(i,j)*(Tveg(i,j) - Tveg0(i,j))/dt
     call LUDCMP(4,A,b,x)
     dQc = x(1)
     dTc = x(2)
     dTs = x(3)
     dTv = x(4)
-    dEs = rho*KHsurf(i,j)*(Dsurf*dTs - dQc)
-    dEv = psiv*rho*KHveg(i,j)*(Dveg*dTs - dQc)
-    dGs = 2*ksurf(i,j)*dTs/Dz1(i,j)
-    dHs = rho*cp*KHsurf(i,j)*(dTs - dTc)
-    dHv = rho*cp*KHveg(i,j)*(dTv - dTc)
-    if (Tsurf(i,j) + dTs < Tm) then
-      call QSAT(Ps(i,j),Tm,Qsurf)
-      Esurf(i,j) = rho*KHsurf(i,j)*(Qsurf - Qcan(i,j))
-      Gsurf(i,j) = 2*ksurf(i,j)*(Tm - Ts1(i,j))/Dz1(i,j)
-      Hsurf = rho*cp*KHsurf(i,j)*(Tm - Tcan(i,j))
-      Rsurf = SWsurf(i,j) + fsky(i,j)*LW(i,j) - sb*Tm**4 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
-      Rveg = SWveg(i,j) + (1 - fsky(i,j))*(LW(i,j) + sb*Tm**4 - 2*sb*Tveg(i,j)**4) 
-      A(1,3) = 0
-      b(1)   = (Hatmo(i,j) - Hveg - Hsurf) / (rho*cp)
-      A(2,3) = 0
-      b(2)   = (Eatmo - Eveg(i,j) - Esurf(i,j)) / rho
-      A(3,3) = 1
-      b(3)   = Rsurf - Hsurf - Lsurf*Esurf(i,j) - Gsurf(i,j)
-      A(4,3) = 0
-      b(4)   = Rveg - Hveg - Lveg*Eveg(i,j)
+    dEs = rho*KWg(i,j)*(Dsrf*dTs - dQc)
+    dEv = rho*KWv(i,j)*(Dveg*dTs - dQc)
+    dGs = 2*ks1(i,j)*dTs/Ds1(i,j)
+    dHs = rho*cp*KHg(i,j)*(dTs - dTc)
+    dHv = rho*cp*KHv(i,j)*(dTv - dTc)
+
+    ! Surface melting
+    if (Tsrf(i,j) + dTs > Tm .and. Sice(1,i,j) > 0) then
+      Melt(i,j) = sum(Sice(:,i,j)) / dt
+      b(3) = Rsrf - Hsrf - Lsrf*Esrf(i,j) - G(i,j) - Lf*Melt(i,j)
       call LUDCMP(4,A,b,x)
       dQc = x(1)
       dTc = x(2)
-      Melt = x(3) / Lf
+      dTs = x(3)
       dTv = x(4)
-      dTs = Tm - Tsurf(i,j)
-      dEs = 0
-      dEv = psiv*rho*KHveg(i,j)*(Dveg*dTs - dQc)
-      dGs = 0
-      dHs = 0
-      dHv = rho*cp*KHveg(i,j)*(dTv - dTc)
+      dEs = rho*KWg(i,j)*(Dsrf*dTs - dQc)
+      dEv = rho*KWv(i,j)*(Dveg*dTs - dQc)
+      dGs = 2*ks1(i,j)*dTs/Ds1(i,j)
+      dHs = rho*cp*KHg(i,j)*(dTs - dTc)
+      dHv = rho*cp*KHv(i,j)*(dTv - dTc)
+      if (Tsrf(i,j) + dTs < Tm) then
+        call QSAT(Ps(i,j),Tm,Qsrf)
+        Esrf(i,j) = rho*KWg(i,j)*(Qsrf - Qcan(i,j))
+        G(i,j) = 2*ks1(i,j)*(Tm - Ts1(i,j))/Ds1(i,j)
+        Hsrf = rho*cp*KHg(i,j)*(Tm - Tcan(i,j))
+        Rsrf = SWsrf(i,j) + fsky(i,j)*LW(i,j) - sb*Tm**4 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
+        Rveg = SWveg(i,j) + (1 - fsky(i,j))*(LW(i,j) + sb*Tm**4 - 2*sb*Tveg(i,j)**4) 
+        A(1,3) = 0
+        b(1)   = (H(i,j) - Hveg - Hsrf) / (rho*cp)
+        A(2,3) = 0
+        b(2)   = (E - Eveg(i,j) - Esrf(i,j)) / rho
+        A(3,3) = 1
+        b(3)   = Rsrf - Hsrf - Lsrf*Esrf(i,j) - G(i,j)
+        A(4,3) = 0
+        b(4)   = Rveg - Hveg - Lveg*Eveg(i,j) - canh(i,j)*(Tveg(i,j) - Tveg0(i,j))/dt
+        call LUDCMP(4,A,b,x)
+        dQc = x(1)
+        dTc = x(2)
+        Melt = x(3) / Lf
+        dTv = x(4)
+        dTs = Tm - Tsrf(i,j)
+        dEs = 0
+        dEv = rho*KWv(i,j)*(Dveg*dTs - dQc)
+        dGs = 2*ks1(i,j)*dTs/Ds1(i,j)
+        dHs = 0
+        dHv = rho*cp*KHv(i,j)*(dTv - dTc)
+      end if
     end if
-  end if
 
-  ! Update temperatures and fluxes
-  Qcan(i,j) = Qcan(i,j) + dQc
-  Tcan(i,j) = Tcan(i,j) + dTc
-  Tsurf(i,j) = Tsurf(i,j) + dTs
-  Tveg(i,j) = Tveg(i,j) + dTv
-  Esurf(i,j) = Esurf(i,j) + dEs
-  Eveg(i,j) = Eveg(i,j) + dEv
-  Gsurf(i,j) = Gsurf(i,j) + dGs
-  Hsurf = Hsurf + dHs
-  Hveg = Hveg + dHv
-  Hatmo(i,j) = Hsurf + Hveg
-  Latmo(i,j) = Lsurf*Esurf(i,j) + Lveg*Eveg(i,j)
-  Rnet = SWsurf(i,j) + SWveg(i,j) + LW(i,j) - fsky(i,j)*sb*Tsurf(i,j)**4 - (1 - fsky(i,j))*sb*Tveg(i,j)**4
+    ! Update temperatures and fluxes
+    Qcan(i,j) = Qcan(i,j) + dQc
+    Tcan(i,j) = Tcan(i,j) + dTc
+    Tsrf(i,j) = Tsrf(i,j) + dTs
+    Tveg(i,j) = Tveg(i,j) + dTv
+    Esrf(i,j) = Esrf(i,j) + dEs
+    Eveg(i,j) = Eveg(i,j) + dEv
+    G(i,j) = G(i,j) + dGs
+    H(i,j) = Hsrf + dHs + Hveg + dHv
+    LE(i,j) = Lsrf*Esrf(i,j) + Lveg*Eveg(i,j)
+    Rnet(i,j) = SWsrf(i,j) + SWveg(i,j) + LW(i,j) - fsky(i,j)*sb*Tsrf(i,j)**4 - (1 - fsky(i,j))*sb*Tveg(i,j)**4
+
+    ! Sublimation limited by amount of snow after melt
+    Ssub = sum(Sice(:,i,j)) - Melt(i,j)*dt
+    if (Ssub > 0 .and. Esrf(i,j)*dt > Ssub) then
+      Esrf(i,j) = Ssub / dt
+      Hsrf = Rnet(i,j) - G(i,j) - Ls*Esrf(i,j) - Melt(i,j)
+    end if
 
   end if
 end do

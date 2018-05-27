@@ -48,7 +48,6 @@ real :: &
   es,                &! Saturation vapour pressure (Pa)
   Tc                  ! Temperature (C)
 
-
 #if DRIV1D == 0
 ! FSM driving data
 read(umet,*,end=1) year,month,day,hour,SWp,LWp,Sfp,Rfp,Tap,RHp,Uap,Psp

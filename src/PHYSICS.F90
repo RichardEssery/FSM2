@@ -12,17 +12,21 @@ implicit none
 
 ! Eddy diffusivities
 real :: &
-  KH(Nx,Ny),         &! Eddy diffusivity for heat fluxes (m/s)
-  KHsurf(Nx,Ny),     &! Surface eddy diffusivity (m/s)
-  KHveg(Nx,Ny)        ! Vegetation eddy diffusivity (m/s)
+  KH(Nx,Ny),         &! Eddy diffusivity for heat to the atmosphere (m/s)
+  KHa(Nx,Ny),        &! Eddy diffusivity from the canopy air space (m/s)
+  KHg(Nx,Ny),        &! Eddy diffusivity for heat from the ground (m/s)
+  KHv(Nx,Ny),        &! Eddy diffusivity for heat from vegetation (m/s)
+  KWg(Nx,Ny),        &! Eddy diffusivity for water from the ground (m/s)
+  KWv(Nx,Ny)          ! Eddy diffusivity for water from vegetation (m/s)
 
 ! Surface properties
 real :: &
   alb(Nx,Ny),        &! Albedo
-  Dz1(Nx,Ny),        &! Surface layer thickness (m)
-  fsnow(Nx,Ny),      &! Snowcover fraction
-  gevap(Nx,Ny),      &! Surface moisture conductance (m/s)
-  ksurf(Nx,Ny),      &! Surface thermal conductivity (W/m/K)
+  Ds1(Nx,Ny),        &! Surface layer thickness (m)
+  fcans(Nx,Ny),      &! Canopy snowcover fraction
+  fsnow(Nx,Ny),      &! Ground snowcover fraction
+  gs1(Nx,Ny),        &! Surface moisture conductance (m/s)
+  ks1(Nx,Ny),        &! Surface thermal conductivity (W/m/K)
   Ts1(Nx,Ny)          ! Surface layer temperature (K)
 
 ! Snow properties
@@ -36,43 +40,45 @@ real :: &
 
 ! Fluxes
 real :: &
-  Esurf(Nx,Ny),      &! Moisture flux from the surface (kg/m^2/s)
+  Esrf(Nx,Ny),       &! Moisture flux from the surface (kg/m^2/s)
   Eveg(Nx,Ny),       &! Moisture flux from vegetation (kg/m^2/s)
-  Gsurf(Nx,Ny),      &! Heat flux into surface (W/m^2)
+  G(Nx,Ny),          &! Heat flux into surface (W/m^2)
   Gsoil(Nx,Ny),      &! Heat flux into soil (W/m^2)
-  Hatmo(Nx,Ny),      &! Sensible heat flux to the atmosphere (W/m^2)
-  Latmo(Nx,Ny),      &! Latent heat flux to the atmosphere (W/m^2)
+  H(Nx,Ny),          &! Sensible heat flux to the atmosphere (W/m^2)
+  LE(Nx,Ny),         &! Latent heat flux to the atmosphere (W/m^2)
   Melt(Nx,Ny),       &! Surface melt rate (kg/m^2/s)
   Rnet(Nx,Ny),       &! Net radiation (W/m^2)
   Roff(Nx,Ny),       &! Runoff from snow (kg/m^2)
-  SWsurf(Nx,Ny),     &! Net SW radiation absorbed by the surface (W/m^2)
+  SWsrf(Nx,Ny),      &! Net SW radiation absorbed by the surface (W/m^2)
   SWveg(Nx,Ny),      &! Net SW radiation absorbed by vegetation (W/m^2)
+  Tveg0(Nx,Ny),      &! Vegetation temperature at start of timestep (K)
   unload(Nx,Ny)       ! Snow mass unloaded from canopy (kg/m^2)
 
 integer :: & 
   n                   ! Iteration counter
 
-call SWRAD(alb,fsnow,SWsurf,SWveg)
+call SWRAD(alb,fcans,fsnow,SWsrf,SWveg)
 
-call THERMAL(csoil,Dz1,gevap,ksnow,ksoil,ksurf,Ts1)
+call THERMAL(csoil,Ds1,gs1,ks1,ksnow,ksoil,Ts1,Tveg0)
 
-do n = 1, 1
+do n = 1, 10
 
-call SFEXCH(fsnow,KH,KHsurf,KHveg)
+call SFEXCH(fsnow,gs1,KH,KHa,KHg,KHv,KWg,KWv)
 
-call EBALFOR(Dz1,gevap,KH,KHsurf,KHveg,ksurf,SWsurf,SWveg,Ts1, &
-             Esurf,Eveg,Gsurf,Hatmo,Latmo,Melt,Rnet)
+call EBALFOR(Ds1,KHa,KHg,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1,Tveg0, &
+             Esrf,Eveg,G,H,LE,Melt,Rnet)
 
-call EBALOPN(Dz1,gevap,KH,ksurf,SWsurf,Ts1,Esurf,Gsurf,Hatmo,Latmo,Melt,Rnet)
+call EBALSRF(Ds1,KH,KHa,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1, &
+             Esrf,Eveg,G,H,LE,Melt,Rnet)
 
 end do
 
 call CANOPY(Eveg,unload)
 
-call SNOW(Esurf,Gsurf,ksnow,ksoil,Melt,unload,Gsoil,Roff)
+call SNOW(Esrf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff)
 
 call SOIL(csoil,Gsoil,ksoil)
 
-call CUMULATE(alb,Gsurf,Hatmo,Latmo,Melt,Rnet,Roff)
+call CUMULATE(alb,G,H,LE,Melt,Rnet,Roff)
 
 end subroutine PHYSICS

@@ -6,7 +6,7 @@ real, parameter :: &
   cp = 1005,         &! Specific heat capacity of air (J/K/kg)
   eps = 0.622,       &! Ratio of molecular weights of water and dry air
   e0 = 611.213,      &! Saturation vapour pressure at Tm (Pa)
-  g = 9.81,          &! Acceleration due to gravity (m/s^2)
+  grav = 9.81,       &! Acceleration due to gravity (m/s^2)
   hcap_ice = 2100.,  &! Specific heat capacity of ice (J/K/kg)
   hcap_wat = 4180.,  &! Specific heat capacity of water (J/K/kg)
   hcon_air = 0.025,  &! Thermal conductivity of air (W/m/K)
@@ -14,11 +14,10 @@ real, parameter :: &
   hcon_ice = 2.24,   &! Thermal conducivity of ice (W/m/K)
   hcon_sand = 1.57,  &! Thermal conductivity of sand (W/m/K)
   hcon_wat = 0.56,   &! Thermal conductivity of water (W/m/K)
-  Lc = 2.501e6,      &! Latent heat of condensation (J/kg)
   Lf = 0.334e6,      &! Latent heat of fusion (J/kg)
-  Ls = Lc + Lf,      &! Latent heat of sublimation (J/kg)
-  R = 8.3145,        &! Universal gas constant (J/K/mol) 
-  Rgas = 287,        &! Gas constant for dry air (J/K/kg)
+  Lv = 2.501e6,      &! Latent heat of vapourisation (J/kg)
+  Ls = Lf + Lv,      &! Latent heat of sublimation (J/kg)
+  Rair = 287,        &! Gas constant for air (J/K/kg)
   Rwat = 462,        &! Gas constant for water vapour (J/K/kg)
   rho_ice = 917.,    &! Density of ice (kg/m^3)
   rho_wat = 1000.,   &! Density of water (kg/m^3)
@@ -104,15 +103,19 @@ module PARAMETERS
 real :: &
   avg0,              &! Snow-free vegetation albedo
   avgs,              &! Snow-covered vegetation albedo
-  canc,              &! Canopy snow capacity per unit VAI (kg/m^2)
-  cunc,              &! Canopy unloading time scale for cold snow (s)
-  cunm,              &! Canopy unloading time scale for melting snow (s)
-  kext                ! Canopy radiation extinction coefficient
+  cden,              &! Dense canopy turbulent transfer coefficient
+  cvai,              &! Canopy snow capacity per unit VAI (kg/m^2)
+  kext,              &! Canopy radiation extinction coefficient
+  cveg,              &! Vegetation turbulent transfer coefficient
+  rchd,              &! Ratio of displacement height to canopy height
+  rchz,              &! Ratio of roughness length to canopy height
+  tcnc,              &! Canopy unloading time scale for cold snow (s)
+  tcnm                ! Canopy unloading time scale for melting snow (s)
 ! Snow parameters
 real :: &
   asmx,              &! Maximum albedo for fresh snow
   asmn,              &! Minimum albedo for melting snow
-  bstb,              &! Stability slope parameter
+  bstb,              &! Atmospheric stability parameter
   bthr,              &! Snow thermal conductivity exponent
   eta0,              &! Reference snow viscosity (Pa s)
   etaa,              &! Snow viscosity parameter (1/K)
@@ -136,7 +139,8 @@ real :: &
   z0sn                ! Snow roughness length (m)
 ! Surface parameters
 real :: &
-  gsat                ! Surface conductance for saturated soil (m/s)
+  gsat,              &! Surface conductance for saturated soil (m/s)
+  z0zh                ! Ratio of roughness lengths for momentum and heat
 end module PARAMETERS
 
 !-----------------------------------------------------------------------
@@ -181,7 +185,7 @@ real, allocatable :: &
   Tveg(:,:)           ! Vegetation temperature (K)
 ! Surface state variables
 real, allocatable :: &
-  Tsurf(:,:)          ! Surface skin temperature (K)
+  Tsrf(:,:)           ! Surface skin temperature (K)
 ! Snow state variables
 integer, allocatable :: &
   Nsnow(:,:)          ! Number of snow layers

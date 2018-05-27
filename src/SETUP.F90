@@ -1,122 +1,18 @@
 !-----------------------------------------------------------------------
-! Set parameter values and initialize prognostic variables
+! Set parameters, initialize prognostic variables and write metadata
 !-----------------------------------------------------------------------
 subroutine SETUP
 
 #include "OPTS.h"
-
-use CONSTANTS, only: &
-  hcon_air,          &! Thermal conductivity of air (W/m/K)
-  hcon_clay,         &! Thermal conductivity of clay (W/m/K)
-  hcon_sand,         &! Thermal conductivity of sand (W/m/K)
-  rho_wat,           &! Density of water (kg/m^3)
-  Tm                  ! Melting point (K)
-
-use DIAGNOSTICS, only: &
-  diags,             &! Averaged diagnostics
-  Nave,              &! Number of timesteps in average outputs
-  Ndiags,            &! Number of averaged diagnostics
-  Nsmp,              &! Timestep for sample outputs
-  SWin,              &! Cumulated incoming solar radiation (J/m^2)
-  SWout               ! Cumulated reflected solar radiation (J/m^2)
-
-use DRIVING, only: &
-  dt,                &! Timestep (s)
-  lat,               &! Latitude (radians)
-  noon,              &! Local offset from solar noon (hours)
-  LW,                &! Incoming longwave radiation (W/m2)
-  Ps,                &! Surface pressure (Pa)
-  Qa,                &! Specific humidity (kg/kg)
-  Rf,                &! Rainfall rate (kg/m2/s)
-  Sf,                &! Snowfall rate (kg/m2/s)
-  SW,                &! Incoming shortwave radiation (W/m2)
-  Ta,                &! Air temperature (K)
-  Ua,                &! Wind speed (m/s)
-  zT,                &! Temperature measurement height (m)
-  zU                  ! Wind measurement height (m)
-
-use GRID, only: &
-  Dzsnow,            &! Minimum snow layer thicknesses (m)
-  Dzsoil,            &! Soil layer thicknesses (m)
-  Nsmax,             &! Maximum number of snow layers
-  Nsoil,             &! Number of soil layers
-  Nx,Ny               ! Grid dimensions
-
-use IOUNITS, only: &
-  udmp,              &! Dump file unit number
-  uave,              &! Average output file unit number
-  umet,              &! Driving file unit number
-  umta,              &! Metadata file unit number
-  usmp,              &! Sample output file unit number
-  ustr                ! Start file unit number
-
-use PARAMETERS, only: &
-  asmx,              &! Maximum albedo for fresh snow
-  asmn,              &! Minimum albedo for melting snow
-  avg0,              &! Snow-free vegetation albedo
-  avgs,              &! Snow-covered vegetation albedo
-  bstb,              &! Stability slope parameter
-  bthr,              &! Snow thermal conductivity exponent
-  canc,              &! Canopy snow capacity per unit LAI (kg/m^2)
-  cunc,              &! Canopy unloading time scale for cold snow (s)
-  cunm,              &! Canopy unloading time scale for melting snow (s)
-  eta0,              &! Reference snow viscosity (Pa s)
-  etaa,              &! Snow viscosity parameter (1/K)
-  etab,              &! Snow viscosity parameter (m^3/kg)
-  gsat,              &! Surface conductance for saturated soil (m/s)
-  hfsn,              &! Snow cover fraction depth scale (m)
-  kext,              &! Canopy radiation extinction coefficient
-  kfix,              &! Thermal conductivity at fixed snow density (W/m/K)
-  rho0,              &! Fixed snow density (kg/m^3)
-  rhoc,              &! Critical snow density (kg/m^3)
-  rhof,              &! Fresh snow density (kg/m^3)
-  rcld,              &! Maximum density for cold snow (kg/m^3)
-  rmlt,              &! Maximum density for melting snow (kg/m^3)
-  Salb,              &! Snowfall to refresh albedo (kg/m^2)
-  snda,              &! Snow densification parameter (1/s)
-  sndb,              &! Snow densification parameter (1/K)
-  sndc,              &! Snow densification parameter (m^3/kg)
-  Talb,              &! Albedo decay temperature threshold (C)
-  tcld,              &! Cold snow albedo decay time scale (s)
-  tmlt,              &! Melting snow albedo decay time scale (s)
-  trho,              &! Snow compaction time scale (s)
-  Wirr,              &! Irreducible liquid water content of snow
-  z0sn                ! Snow roughness length (m)
-
-use PARAMMAPS, only: &
-  alb0,              &! Snow-free ground albedo
-  canh,              &! Canopy heat capacity (J/K/m^2)
-  fcly,              &! Soil clay fraction
-  fsnd,              &! Soil sand fraction
-  fsky,              &! Sky view fraction
-  fveg,              &! Canopy cover fraction
-  hcan,              &! Canopy height (m)
-  scap,              &! Canopy snow capacity (kg/m^2)
-  VAI,               &! Vegetation area index
-  z0sf                ! Snow-free roughness length (m)
-
-use SOILPARAMS, only: &
-  b,                 &! Clapp-Hornberger exponent
-  hcap_soil,         &! Volumetric heat capacity of dry soil (J/K/m^3)
-  hcon_soil,         &! Thermal conductivity of dry soil (W/m/K)
-  sathh,             &! Saturated soil water pressure (m)
-  Vcrit,             &! Volumetric soil moisture concentration at critical point
-  Vsat                ! Volumetric soil moisture concentration at saturation
-
-use STATE_VARIABLES, only: &
-  albs,              &! Snow albedo
-  Ds,                &! Snow layer thicknesses (m)
-  Nsnow,             &! Number of snow layers 
-  Qcan,              &! Canopy air space humidity
-  Sice,              &! Ice content of snow layers (kg/m^2)
-  Sliq,              &! Liquid content of snow layers (kg/m^2)
-  Sveg,              &! Canopy snow mass (kg/m^2)
-  Tcan,              &! Canopy air space temperature (K)
-  theta,             &! Volumetric moisture content of soil layers
-  Tsnow,             &! Snow layer temperatures (K)
-  Tsoil,             &! Soil layer temperatures (K)
-  Tsurf,             &! Surface skin temperature (K)
-  Tveg                ! Vegetation temperature (K)
+use CONSTANTS
+use DIAGNOSTICS
+use DRIVING
+use GRID
+use IOUNITS
+use PARAMETERS
+use PARAMMAPS
+use SOILPARAMS 
+use STATE_VARIABLES 
 
 implicit none
 
@@ -160,9 +56,9 @@ namelist /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,VAI,z0sf,  &
                 alb0_file,canh_file,fcly_file,fsnd_file,fsky_file, &
                 fveg_file,hcan_file,scap_file,VAI_file,z0sf_file 
 namelist /outputs/ Nave,Nsmp,ave_file,dmp_file,smp_file,runid
-namelist /params/ asmx,asmn,avg0,avgs,bstb,bthr,canc,cunc,cunm,eta0,etaa,etab,gsat,hfsn,  &
-                  kext,kfix,rho0,rhoc,rhof,rcld,rmlt,Salb,snda,sndb,sndc,Talb,tcld,tmlt,  &
-                  trho,Wirr,z0sn
+namelist /params/ asmx,asmn,avg0,avgs,bstb,bthr,cden,cvai,cveg,eta0,etaa,etab,gsat,hfsn,  &
+                  kext,kfix,rchd,rchz,rho0,rhoc,rhof,rcld,rmlt,Salb,snda,sndb,sndc,Talb,  &
+                  tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn,z0zh
 
 ! Grid parameters
 Nx = 1
@@ -178,7 +74,7 @@ read(5, gridlevs)
 
 ! Driving data
 met_file = 'met'
-dt = 1
+dt = 3600
 lat = 0
 noon = 0
 zT = 2
@@ -198,10 +94,14 @@ allocate(Ua(Nx,Ny))
 ! Defaults for canopy parameters
 avg0 = 0.1
 avgs = 0.4
-canc = 4.4
-cunc = 240
-cunm = 2.4
+cden = 0.004
+cvai = 4.4
+cveg = 20
 kext = 0.5
+rchd = 0.67
+rchz = 0.1
+tcnc = 240
+tcnm = 2.4
 
 ! Defaults for snow parameters
 asmx = 0.8
@@ -229,9 +129,10 @@ trho = 200
 Wirr = 0.03
 z0sn = 0.01
 
-! Defaults for surface parameters
+! Defaults for ground surface parameters
 bstb = 5
 gsat = 0.01
+z0zh = 10
 
 ! Read parameter namelist and overwrite defaults
 read(5,params)
@@ -283,8 +184,8 @@ call READMAPS(VAI_file,VAI)
 call READMAPS(z0sf_file,z0sf)
 if (canh(1,1) < 0) canh(:,:) = 2500*VAI(:,:)
 if (fsky(1,1) < 0) fsky(:,:) = exp(-kext*VAI(:,:))
-if (fveg(1,1) < 0) fveg(:,:) = 1 - exp(-kext*VAI(:,:))
-if (scap(1,1) < 0) scap(:,:) = canc*VAI(:,:)
+if (fveg(1,1) < 0) fveg(:,:) = 1 - exp(-VAI(:,:))
+if (scap(1,1) < 0) scap(:,:) = cvai*VAI(:,:)
 
 ! Derived soil parameters
 allocate(b(Nx,Ny))
@@ -297,7 +198,7 @@ do j = 1, Ny
 do i = 1, Nx
   if (fcly(i,j) + fsnd(i,j) > 1) fcly(i,j) = 1 - fsnd(i,j)
   b(i,j) = 3.1 + 15.7*fcly(i,j) - 0.3*fsnd(i,j)
-  hcap_soil(i,j) = (2.128*fcly(i,j) + 2.385*fsnd(i,j))*1E6 / (fcly(i,j) + fsnd(i,j))
+  hcap_soil(i,j) = (2.128*fcly(i,j) + 2.385*fsnd(i,j))*1e6 / (fcly(i,j) + fsnd(i,j))
   sathh(i,j) = 10**(0.17 - 0.63*fcly(i,j) - 1.58*fsnd(i,j))
   Vsat(i,j) = 0.505 - 0.037*fcly(i,j) - 0.142*fsnd(i,j)
   Vcrit(i,j) = Vsat(i,j)*(sathh(i,j)/3.364)**(1/b(i,j))
@@ -307,9 +208,8 @@ end do
 end do
 
 ! Convert time scales from hours to seconds
-dt = 3600*dt
-cunc = max(3600*cunc, dt)
-cunm = max(3600*cunm, dt)
+tcnc = 3600*tcnc
+tcnm = 3600*tcnm
 tcld = 3600*tcld
 tmlt = 3600*tmlt
 trho = 3600*trho
@@ -326,7 +226,7 @@ allocate(Tcan(Nx,Ny))
 allocate(theta(Nsoil,Nx,Ny))
 allocate(Tsnow(Nsmax,Nx,Ny))
 allocate(Tsoil(Nsoil,Nx,Ny))
-allocate(Tsurf(Nx,Ny))
+allocate(Tsrf(Nx,Ny))
 allocate(Tveg(Nx,Ny))
 
 ! Default initialization of state variables
@@ -353,7 +253,7 @@ do k = 1, Nsoil
   theta(k,:,:) = fsat(k)*Vsat(:,:)
   Tsoil(k,:,:) = Tprof(k)
 end do
-Tsurf(:,:) = Tsoil(1,:,:)
+Tsrf(:,:) = Tsoil(1,:,:)
 
 ! Initialize state variables from a named start file
 if (start_file /= 'none') then
@@ -369,7 +269,7 @@ if (start_file /= 'none') then
   read(ustr,*) theta(:,:,:)
   read(ustr,*) Tsnow(:,:,:)
   read(ustr,*) Tsoil(:,:,:)
-  read(ustr,*) Tsurf(:,:)
+  read(ustr,*) Tsrf(:,:)
   read(ustr,*) Tveg(:,:)
   close(ustr)
 end if

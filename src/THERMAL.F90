@@ -1,12 +1,12 @@
 !-----------------------------------------------------------------------
 ! Thermal properties of snow and soil
 !-----------------------------------------------------------------------
-subroutine THERMAL(csoil,Dz1,gevap,ksnow,ksoil,ksurf,Ts1)
+subroutine THERMAL(csoil,Ds1,gs1,ks1,ksnow,ksoil,Ts1,Tveg0)
 
 #include "OPTS.h"
 
 use CONSTANTS, only: &
-  g,                 &! Acceleration due to gravity (m/s^2)
+  grav,              &! Acceleration due to gravity (m/s^2)
   hcap_ice,          &! Specific heat capacity of ice (J/K/kg)
   hcap_wat,          &! Specific heat capacity of water (J/K/kg)
   hcon_air,          &! Thermal conductivity of air (W/m/K)
@@ -46,15 +46,16 @@ use STATE_VARIABLES, only: &
   theta,             &! Volumetric soil moisture content
   Tsnow,             &! Snow layer temperatures (K)
   Tsoil,             &! Soil layer temperatures (K)
-  Tsurf               ! Surface skin temperature (K)
+  Tveg                ! Vegetation temperature (K)
 
 implicit none
 
 real, intent(out) :: &
-  Dz1(Nx,Ny),        &! Surface layer thickness (m)
-  gevap(Nx,Ny),      &! Surface moisture conductance (m/s)
-  ksurf(Nx,Ny),      &! Surface thermal conductivity (W/m/K)
+  Ds1(Nx,Ny),        &! Surface layer thickness (m)
+  gs1(Nx,Ny),        &! Surface moisture conductance (m/s)
+  ks1(Nx,Ny),        &! Surface thermal conductivity (W/m/K)
   Ts1(Nx,Ny),        &! Surface layer temperature (K)
+  Tveg0(Nx,Ny),      &! Vegetation temperature at start of timestep (K)
   csoil(Nsoil,Nx,Ny),&! Areal heat capacity of soil (J/K/m^2)
   ksnow(Nsmax,Nx,Ny),&! Thermal conductivity of snow (W/m/K)
   ksoil(Nsoil,Nx,Ny)  ! Thermal conductivity of soil (W/m/K)
@@ -99,7 +100,7 @@ end do
 end do
 
 ! Heat capacity and thermal conductivity of soil
-dPsidT = - rho_ice*Lf/(rho_wat*g*Tm)
+dPsidT = - rho_ice*Lf/(rho_wat*grav*Tm)
 do j = 1, Ny
 do i = 1, Nx
   do k = 1, Nsoil
@@ -130,7 +131,7 @@ do i = 1, Nx
       if (Smu > 0) thwat = Vsat(i,j)*Smu/(Smu + Smf)
       hcon_sat = hcon_soil(i,j)*(hcon_wat**thwat)*(hcon_ice**thice)/(hcon_air**Vsat(i,j))
       ksoil(k,i,j) = (hcon_sat - hcon_soil(i,j))*(Smf + Smu) + hcon_soil(i,j)
-      if (k == 1) gevap(i,j) = gsat*max((Smu*Vsat(i,j)/Vcrit(i,j))**2, 1.)
+      if (k == 1) gs1(i,j) = gsat*max((Smu*Vsat(i,j)/Vcrit(i,j))**2, 1.)
     end if
   end do
 end do
@@ -139,11 +140,12 @@ end do
 ! Surface layer
 do j = 1, Ny
 do i = 1, Nx
-  Dz1(i,j) = max(Dzsoil(1), Ds(1,i,j))
+  Ds1(i,j) = max(Dzsoil(1), Ds(1,i,j))
   Ts1(i,j) = Tsoil(1,i,j) + (Tsnow(1,i,j) - Tsoil(1,i,j))*Ds(1,i,j)/Dzsoil(1)
-  ksurf(i,j) = Dzsoil(1) / (2*Ds(1,i,j)/ksnow(1,i,j) + (Dzsoil(1) - 2*Ds(1,i,j))/ksoil(1,i,j))
-  if (Ds(1,i,j) > 0.5*Dzsoil(1)) ksurf(i,j) = ksnow(1,i,j)
+  ks1(i,j) = Dzsoil(1) / (2*Ds(1,i,j)/ksnow(1,i,j) + (Dzsoil(1) - 2*Ds(1,i,j))/ksoil(1,i,j))
+  if (Ds(1,i,j) > 0.5*Dzsoil(1)) ks1(i,j) = ksnow(1,i,j)
   if (Ds(1,i,j) > Dzsoil(1)) Ts1(i,j) = Tsnow(1,i,j)
+  Tveg0(i,j) = Tveg(i,j)
 end do
 end do
 

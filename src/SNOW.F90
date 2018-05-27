@@ -1,12 +1,12 @@
 !-----------------------------------------------------------------------
 ! Snow thermodynamics and hydrology
 !-----------------------------------------------------------------------
-subroutine SNOW(Esurf,Gsurf,ksnow,ksoil,Melt,unload,Gsoil,Roff)
+subroutine SNOW(Esurf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff)
 
 #include "OPTS.h"
  
 use CONSTANTS, only: &
-  g,                 &! Acceleration due to gravity (m/s^2)
+  grav,              &! Acceleration due to gravity (m/s^2)
   hcap_ice,          &! Specific heat capacity of ice (J/K/kg)
   hcap_wat,          &! Specific heat capacity of water (J/K/kg)
   Lf,                &! Latent heat of fusion (J/kg)
@@ -49,13 +49,13 @@ use STATE_VARIABLES, only: &
   Sliq,              &! Liquid content of snow layers (kg/m^2)
   Tsnow,             &! Snow layer temperatures (K)
   Tsoil,             &! Soil layer temperatures (K)
-  Tsurf               ! Surface skin temperature (K)
+  Tsrf               ! Surface skin temperature (K)
 
 implicit none
 
 real, intent(in) :: &
   Esurf(Nx,Ny),      &! Moisture flux from the surface (kg/m^2/s)
-  Gsurf(Nx,Ny),      &! Heat flux into surface (W/m^2)
+  G(Nx,Ny),          &! Heat flux into surface (W/m^2)
   ksnow(Nsmax,Nx,Ny),&! Thermal conductivity of snow (W/m/K)
   ksoil(Nsoil,Nx,Ny),&! Thermal conductivity of soil (W/m/K)
   Melt(Nx,Ny),       &! Surface melt rate (kg/m^2/s)
@@ -98,7 +98,7 @@ real :: &
   U(Nsmax),          &! Layer internal energy contents (J/m^2)
   W(Nsmax)            ! Liquid contents before adjustment (kg/m^2)
 
-Gsoil(:,:) = Gsurf(:,:)
+Gsoil(:,:) = G(:,:)
 Roff(:,:) = Rf(:,:)*dt
 
 ! Points with existing snowpack
@@ -112,7 +112,7 @@ do i = 1, Nx
     end do
     if (Nsnow(i,j) == 1) then
       Gs(1) = 2 / (Ds(1,i,j)/ksnow(1,i,j) + Dzsoil(1)/ksoil(1,i,j))
-      dTs(1) = (Gsurf(i,j) + Gs(1)*(Tsoil(1,i,j) - Tsnow(1,i,j)))*dt /  &
+      dTs(1) = (G(i,j) + Gs(1)*(Tsoil(1,i,j) - Tsnow(1,i,j)))*dt /  &
                (csnow(1) + Gs(1)*dt)
     else
       do k = 1, Nsnow(i,j) - 1
@@ -121,7 +121,7 @@ do i = 1, Nx
       a(1) = 0
       b(1) = csnow(1) + Gs(1)*dt
       c(1) = - Gs(1)*dt
-      rhs(1) = (Gsurf(i,j) - Gs(1)*(Tsnow(1,i,j) - Tsnow(2,i,j)))*dt
+      rhs(1) = (G(i,j) - Gs(1)*(Tsnow(1,i,j) - Tsnow(2,i,j)))*dt
       do k = 2, Nsnow(i,j) - 1
         a(k) = c(k-1)
         b(k) = csnow(k) + (Gs(k-1) + Gs(k))*dt
@@ -221,7 +221,7 @@ do i = 1, Nx
     end do
 #endif
 #if DENSTY == 1
-  ! Prognostic snow density
+  ! Verseghy (1991) prognostic snow density
     do k = 1, Nsnow(i,j)
       if (Ds(k,i,j) > epsilon(Ds)) then
         rhos = (Sice(k,i,j) + Sliq(k,i,j)) / Ds(k,i,j)
@@ -241,8 +241,8 @@ do i = 1, Nx
       mass = mass + 0.5*(Sice(k,i,j) + Sliq(k,i,j)) 
       if (Ds(k,i,j) > epsilon(Ds)) then
         rhos = (Sice(k,i,j) + Sliq(k,i,j)) / Ds(k,i,j)
-        rhos = rhos + (rhos*g*mass*dt/eta0)*exp(-etaa*(Tm - Tsnow(k,i,j)) - etab*rhos)  &
-                    + dt*rhos*snda*exp(-sndb*(Tm - Tsnow(k,i,j)) - sndc*max(rhos - 150, 0.))
+        rhos = rhos + (rhos*grav*mass*dt/eta0)*exp(etaa*(Tsnow(k,i,j) - Tm) - etab*rhos)  &
+                    + dt*rhos*snda*exp(sndb*(Tsnow(k,i,j) - Tm) - sndc*max(rhos - rhoc, 0.))
         Ds(k,i,j) = (Sice(k,i,j) + Sliq(k,i,j)) / rhos
       end if
       mass = mass + 0.5*(Sice(k,i,j) + Sliq(k,i,j))
@@ -259,7 +259,7 @@ do i = 1, Nx
 
 ! Add snowfall and frost to layer 1 with fresh snow density
   Esnow = 0
-  if (Esurf(i,j) < 0 .and. Tsurf(i,j) < Tm) Esnow = Esurf(i,j)
+  if (Esurf(i,j) < 0 .and. Tsrf(i,j) < Tm) Esnow = Esurf(i,j)
   dSice = (Sf(i,j) - Esnow)*dt
   Ds(1,i,j) = Ds(1,i,j) + dSice / rhof
   Sice(1,i,j) = Sice(1,i,j) + dSice

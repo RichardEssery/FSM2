@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Surface and canopy net shortwave radiation
 !-----------------------------------------------------------------------
-subroutine SWRAD(alb,fsnow,SWsurf,SWveg)
+subroutine SWRAD(alb,fcans,fsnow,SWsrf,SWveg)
 
 #include "OPTS.h"
 
@@ -26,7 +26,6 @@ use PARAMETERS, only: &
   asmn,              &! Minimum albedo for melting snow
   avg0,              &! Snow-free vegetation albedo
   avgs,              &! Snow-covered vegetation albedo
-  canc,              &! Canopy snow capacity per unit VAI (kg/m^2)
   hfsn,              &! Snowcover fraction depth scale (m)
   kext,              &! Canopy radiation extinction coefficient
   Salb,              &! Snowfall to refresh albedo (kg/m^2)
@@ -45,14 +44,15 @@ use STATE_VARIABLES, only: &
   albs,              &! Snow albedo
   Ds,                &! Snow layer thicknesses (m)
   Sveg,              &! Snow mass on vegetation (kg/m^2)
-  Tsurf               ! Surface skin temperature (K)
-
+  Tsrf                ! Surface skin temperature (K)
+ 
 implicit none
 
 real, intent(out) :: &
   alb(Nx,Ny),        &! Albedo
-  fsnow(Nx,Ny),      &! Snowcover fraction
-  SWsurf(Nx,Ny),     &! Net SW radiation absorbed by the surface (W/m^2)
+  fcans(Nx,Ny),      &! Canopy snowcover fraction
+  fsnow(Nx,Ny),      &! Ground snowcover fraction
+  SWsrf(Nx,Ny),      &! Net SW radiation absorbed by the surface (W/m^2)
   SWveg(Nx,Ny)        ! Net SW radiation absorbed by vegetation (W/m^2)
 
 integer :: &
@@ -68,7 +68,7 @@ real :: &
 real :: &
   alim,              &! Limiting snow albedo
   acan,              &! Canopy albedo
-  asurf,             &! Surface albedo
+  asrf,              &! Surface albedo
   aveg,              &! Vegetation albedo
   dang,              &! Day angle (radians)
   doy,               &! Day of year
@@ -76,7 +76,6 @@ real :: &
   decl,              &! Solar declination (radians)
   sinelev,           &! Sine of solar elevation
   eqtm,              &! Equation of time (hours)
-  fcans,             &! Canopy snowcover fraction
   hang,              &! Hour angle (radians)
   kt,                &! Atmospheric transmissivity
   rt,                &! Reciprocal timescale for albedo adjustment (1/s)
@@ -90,12 +89,12 @@ do j = 1, Ny
 do i = 1, Nx
 #if ALBEDO == 0
 ! Diagnostic
-  albs(i,j) = asmn + (asmx - asmn)*(Tsurf(i,j) - Tm) / Talb
+  albs(i,j) = asmn + (asmx - asmn)*(Tsrf(i,j) - Tm) / Talb
 #endif
 #if ALBEDO == 1
 ! Prognostic
   tau = tcld
-  if (Tsurf(i,j) >= Tm) tau = tmlt
+  if (Tsrf(i,j) >= Tm) tau = tmlt
   rt = 1/tau + Sf(i,j)/Salb
   alim = (asmn/tau + Sf(i,j)*asmx/Salb)/rt
   albs(i,j) = alim + (albs(i,j) - alim)*exp(-rt*dt)
@@ -113,7 +112,6 @@ SWdir = 0
 #endif
 #if SWPART == 1
 ! Calculate direct and diffuse SW radiation
-
 doy = 275*month/9 - 3*((1 + (month - 9)/7)/100 + 1)/4 &
                   - 7*(1 + (month + 9)/12)/4 + day - 29
 dang = 2*pi*(doy - 1)/365
@@ -152,24 +150,25 @@ do i = 1, Nx
 ! Partial snowcover on ground
   snowdepth = sum(Ds(:,i,j))
   fsnow(i,j) = tanh(snowdepth/hfsn)
-  asurf = fsnow(i,j)*albs(i,j) + (1 - fsnow(i,j))*alb0(i,j)
+  asrf = fsnow(i,j)*albs(i,j) + (1 - fsnow(i,j))*alb0(i,j)
 ! Partial snowcover on canopy
   acan = 0
+  fcans(i,j) = 0
   if (scap(i,j) > 0) then 
-    fcans = Sveg(i,j) / scap(i,j)
-    aveg = (1 - fcans)*avg0 + fcans*avgs
+    fcans(i,j) = Sveg(i,j) / scap(i,j)
+    aveg = (1 - fcans(i,j))*avg0 + fcans(i,j)*avgs
     acan = fveg(i,j)*aveg
   end if
 ! Effective albedo and net radiation
   tdif = fsky(i,j)
   tdir = 0
   if (sinelev > epsilon(sinelev)) tdir = exp(-0.5*VAI(i,j)/sinelev)
-  alb(i,j) = acan + (1 - acan)*asurf*tdif**2
+  alb(i,j) = acan + (1 - acan)*asrf*tdif**2
   if (SW(i,j) > epsilon(SW))  &
-    alb(i,j) = acan + (1 - acan)*asurf*tdif*(tdif*SWdif(i,j) + tdir*SWdir(i,j)) / SW(i,j)
-  SWsurf(i,j) = (1 - acan)*(1 - asurf)*(tdif*SWdif(i,j) + tdir*SWdir(i,j)) 
-  SWveg(i,j) = (1 - acan)*(1 + asurf*tdif)*(1 - tdif)*SWdif(i,j) +    &
-               (1 - acan)*(1 - tdir + (1 - tdif)*tdir*asurf)*SWdir(i,j)
+    alb(i,j) = acan + (1 - acan)*asrf*tdif*(tdif*SWdif(i,j) + tdir*SWdir(i,j)) / SW(i,j)
+  SWsrf(i,j) = (1 - acan)*(1 - asrf)*(tdif*SWdif(i,j) + tdir*SWdir(i,j)) 
+  SWveg(i,j) = (1 - acan)*(1 + asrf*tdif)*(1 - tdif)*SWdif(i,j) +    &
+               (1 - acan)*(1 - tdir + (1 - tdif)*tdir*asrf)*SWdir(i,j)
 end do
 end do
 
