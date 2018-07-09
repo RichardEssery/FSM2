@@ -29,6 +29,10 @@ Option number & Description & Options \\
 & 0 - Total SW radation used \\
 & & 1 - Difuse and direct SW calculated \\
 \hline
+{\tt ZOFFST} & Measurement height offset
+& 0 - Height above ground \\
+& & 1 - Height above canopy top \\
+\hline
 \end{tabular}
 
 \subsection*{Physics compilation options }
@@ -108,7 +112,7 @@ Variable        & Default & Description                                 \\
 \hline 
 \end{tabular}
 
-For simulations at a point or for a set of nearby points with common meteorology, 1D driving data are read from the named text file. The default FSM file format has 12 columns containing the variables listed in the table below. Each row of the file corresponds with a timestep. Text driving files supplied for \href{https://www.geos.ed.ac.uk/~ressery/ESM-SnowMIP/ESMSnowMIP_Reference_sites.pdf}{ESM-SnowMIP} have an additional column for specific humidity, and the order of the rainfall and snowfall columns is switched.
+Measurement heights are specified above the ground if FSM2 is compiled with {\tt ZOFFST=0} and above the canopy top if {\tt ZOFFST=1} (required for driving with reanalyses). For simulations at a point or for a set of nearby points with common meteorology, 1D driving data are read from the named text file. The default FSM file format has 12 columns containing the variables listed in the table below. Each row of the file corresponds with a timestep. Text driving files supplied for \href{https://www.geos.ed.ac.uk/~ressery/ESM-SnowMIP/ESMSnowMIP_Reference_sites.pdf}{ESM-SnowMIP} have an additional column for specific humidity, and the order of the rainfall and snowfall columns is switched.
 
 \begin{tabular}{|l|l|l|}
 \hline
@@ -140,12 +144,13 @@ Parameter & Default & Description \\
 \hline 
 \multicolumn{3}{|c|}{All options} \\
 \hline 
-{\tt asmx} & 0.8    & Maximum albedo for fresh snow   \\
-{\tt asmn} & 0.5    & Minimum albedo for melting snow \\
-{\tt gsat} & 0.01 m $s^{-1}$ & Surface conductance for saturated soil   \\
-{\tt hfsn} & 0.1 m  & Snow cover fraction depth scale \\
-{\tt z0zh} & 10     & Ratio of roughness lengths for momentum and heat  \\
-{\tt z0sn} & 0.01 m & Snow surface roughness length   \\
+{\tt asmx} & 0.8    & Maximum albedo for fresh snow                      \\
+{\tt asmn} & 0.5    & Minimum albedo for melting snow                    \\
+{\tt gsat} & 0.01 m $s^{-1}$ & Surface conductance for saturated soil    \\
+{\tt hfsn} & 0.1 m  & Snow cover fraction depth scale                    \\
+{\tt Nitr} & 4      & Number of iterations in energy balance calculation \\
+{\tt z0zh} & 10     & Ratio of roughness lengths for momentum and heat   \\
+{\tt z0sn} & 0.01 m & Snow surface roughness length                      \\
 \hline 
 \hline 
 \multicolumn{3}{|c|}{Diagnostic snow albedo option {\tt ALBEDO=0}} \\
@@ -213,6 +218,7 @@ Parameter & Default & Description \\
 {\tt cvai} & 4.4 kg m$^{-2}$ & Canopy snow capacity per unit VAI            \\
 {\tt cveg} & 20              & Vegetation turbulent transfer coefficient    \\
 {\tt kext} & 0.5             & Canopy radiation extinction coefficient      \\
+{\tt kveg} & 1.0             & Canopy cover coefficient                     \\
 {\tt rchd} & 0.67            & Displacement height to canopy height ratio   \\
 {\tt rchz} & 0.1             & Roughness length to canopy height ratio      \\
 {\tt tcnc} & 240 h           & Canopy unloading time scale for cold snow    \\
@@ -231,7 +237,7 @@ Parameter   & Default              & Description                                
 {\tt fcly}  & 0.3                  & Soil clay fraction                         \\
 {\tt fsnd}  & 0.6                  & Soil sand fraction                         \\
 {\tt fsky}  & {\tt exp(-kext VAI)} & Sky view fraction                          \\
-{\tt fveg}  & {\tt 1 - exp(-VAI)}  & Canopy cover fraction                      \\
+{\tt fveg}  & {\tt 1 - exp(-kveg VAI)}  & Canopy cover fraction                 \\
 {\tt hcan}  & 0                    & Canopy height (m)                          \\
 {\tt VAI}   & 0                    & Vegetation area index                      \\
 {\tt z0sf}  & 0.1                  & Snow-free ground roughness length          \\
@@ -320,24 +326,27 @@ Variable          & Units       & Description           \\
 \hline 
 \end{tabular}
 
-The average file has 3 + 7$\times${\tt Nx$\times$Ny} columns:
+The average file has 3 + 12$\times${\tt Nx$\times$Ny} columns:
 
 \begin{tabular}{|l|l|l|}
 \hline
-Variable           & Units        & Description            \\
+Variable           & Units        & Description                          \\
 \hline
-{\tt year}         & years        & Year                   \\
-{\tt month}        & months       & Month of the year      \\
-{\tt day}          & days         & Day of the month       \\
-{\tt alb(Nx*Ny)}   & -            & Flux-weighted albedo   \\
-{\tt G(Nx*Ny)}     & W m $^{-2}$  & Ground heat flux       \\
-{\tt Ho(Nx*Ny)}    & W m $^{-2}$  & Sensible heat flux     \\
-{\tt LE(Nx*Ny)}    & W m $^{-2}$  & Latent heat flux       \\
-{\tt Melt(Nx*Ny)}  & kg m $^{-2}$ & Cumulated melt         \\
-{\tt Rnet(Nx*Ny)}  & W m $^{-2}$  & Net radiation          \\
-{\tt Roff(Nx*Ny)}  & kg m $^{-2}$ & Cumulated runoff       \\
-{\tt Tsrf(Nx*Ny)}  & C            & Surface temperature    \\
-{\tt Tsoil(Nx*Ny)} & C            & 20 cm soil temperature \\
+{\tt year}         & years        & Year                                 \\
+{\tt month}        & months       & Month of the year                    \\
+{\tt day}          & days         & Day of the month                     \\
+{\tt alb(Nx*Ny)}   & -            & Flux-weighted albedo                 \\
+{\tt G(Nx*Ny)}     & W m $^{-2}$  & Ground heat flux                     \\
+{\tt H(Nx*Ny)}     & W m $^{-2}$  & Sensible heat flux to the atmosphere \\
+{\tt Hsrf(Nx*Ny)}  & W m $^{-2}$  & Sensible heat flux from the surface  \\
+{\tt LE(Nx*Ny)}    & W m $^{-2}$  & Latent heat flux to the atmosphere   \\
+{\tt LEsrf(Nx*Ny)} & W m $^{-2}$  & Latent heat flux from the surface    \\
+{\tt Melt(Nx*Ny)}  & kg m $^{-2}$ & Cumulated melt                       \\
+{\tt Rnet(Nx*Ny)}  & W m $^{-2}$  & Net radiation                        \\
+{\tt Roff(Nx*Ny)}  & kg m $^{-2}$ & Cumulated runoff                     \\
+{\tt Rsrf(Nx*Ny)}  & W m $^{-2}$  & Net radiation absorbed by the surface\\
+{\tt Tsrf(Nx*Ny)}  & C            & Surface temperature                  \\
+{\tt Tsoil(Nx*Ny)} & C            & 20 cm soil temperature               \\
 \hline 
 \end{tabular}
 

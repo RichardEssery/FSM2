@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Snow thermodynamics and hydrology
 !-----------------------------------------------------------------------
-subroutine SNOW(Esurf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff)
+subroutine SNOW(Esrf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff)
 
 #include "OPTS.h"
  
@@ -54,7 +54,7 @@ use STATE_VARIABLES, only: &
 implicit none
 
 real, intent(in) :: &
-  Esurf(Nx,Ny),      &! Moisture flux from the surface (kg/m^2/s)
+  Esrf(Nx,Ny),       &! Moisture flux from the surface (kg/m^2/s)
   G(Nx,Ny),          &! Heat flux into surface (W/m^2)
   ksnow(Nsmax,Nx,Ny),&! Thermal conductivity of snow (W/m/K)
   ksoil(Nsoil,Nx,Ny),&! Thermal conductivity of soil (W/m/K)
@@ -168,7 +168,7 @@ do i = 1, Nx
     end do
 
   ! Remove snow by sublimation 
-    dSice = max(Esurf(i,j), 0.)*dt
+    dSice = max(Esrf(i,j), 0.)*dt
     if (dSice > 0) then
       do k = 1, Nsnow(i,j)
         if (dSice > Sice(k,i,j)) then  ! Layer sublimates completely
@@ -259,7 +259,7 @@ do i = 1, Nx
 
 ! Add snowfall and frost to layer 1 with fresh snow density
   Esnow = 0
-  if (Esurf(i,j) < 0 .and. Tsrf(i,j) < Tm) Esnow = Esurf(i,j)
+  if (Esrf(i,j) < 0 .and. Tsrf(i,j) < Tm) Esnow = Esrf(i,j)
   dSice = (Sf(i,j) - Esnow)*dt
   Ds(1,i,j) = Ds(1,i,j) + dSice / rhof
   Sice(1,i,j) = Sice(1,i,j) + dSice

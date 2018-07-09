@@ -34,7 +34,7 @@ integer :: &
   Nave,              &! Number of timesteps in average outputs
   Nsmp                ! Timestep for sample outputs
 integer, parameter :: &
-  Ndiags = 8          ! Number of averaged diagnostics
+  Ndiags = 11         ! Number of averaged diagnostics
 real, allocatable :: &
   diags(:,:,:),      &! Averaged diagnostics
   SWin(:,:),         &! Cumulated incoming solar radiation (J/m^2)
@@ -99,6 +99,9 @@ end module IOUNITS
 ! Parameters
 !-----------------------------------------------------------------------
 module PARAMETERS
+! Numerical solution parameter
+integer :: &
+  Nitr                ! Number of iterations in energy balance calulation
 ! Vegetation parameters
 real :: &
   avg0,              &! Snow-free vegetation albedo
@@ -106,6 +109,7 @@ real :: &
   cden,              &! Dense canopy turbulent transfer coefficient
   cvai,              &! Canopy snow capacity per unit VAI (kg/m^2)
   kext,              &! Canopy radiation extinction coefficient
+  kveg,              &! Canopy cover coefficient
   cveg,              &! Vegetation turbulent transfer coefficient
   rchd,              &! Ratio of displacement height to canopy height
   rchz,              &! Ratio of roughness length to canopy height

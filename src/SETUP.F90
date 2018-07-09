@@ -57,8 +57,8 @@ namelist /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,VAI,z0sf,  &
                 fveg_file,hcan_file,scap_file,VAI_file,z0sf_file 
 namelist /outputs/ Nave,Nsmp,ave_file,dmp_file,smp_file,runid
 namelist /params/ asmx,asmn,avg0,avgs,bstb,bthr,cden,cvai,cveg,eta0,etaa,etab,gsat,hfsn,  &
-                  kext,kfix,rchd,rchz,rho0,rhoc,rhof,rcld,rmlt,Salb,snda,sndb,sndc,Talb,  &
-                  tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn,z0zh
+                  kext,kfix,kveg,Nitr,rchd,rchz,rho0,rhoc,rhof,rcld,rmlt,Salb,snda,sndb,  &
+                  sndc,Talb,tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn,z0zh
 
 ! Grid parameters
 Nx = 1
@@ -89,7 +89,10 @@ allocate(Rf(Nx,Ny))
 allocate(Sf(Nx,Ny))
 allocate(SW(Nx,Ny))
 allocate(Ta(Nx,Ny))
-allocate(Ua(Nx,Ny))         
+allocate(Ua(Nx,Ny))
+
+! Defaults for numerical solution parameters
+Nitr = 4
 
 ! Defaults for canopy parameters
 avg0 = 0.1
@@ -98,6 +101,7 @@ cden = 0.004
 cvai = 4.4
 cveg = 20
 kext = 0.5
+kveg = 1
 rchd = 0.67
 rchz = 0.1
 tcnc = 240
@@ -184,7 +188,7 @@ call READMAPS(VAI_file,VAI)
 call READMAPS(z0sf_file,z0sf)
 if (canh(1,1) < 0) canh(:,:) = 2500*VAI(:,:)
 if (fsky(1,1) < 0) fsky(:,:) = exp(-kext*VAI(:,:))
-if (fveg(1,1) < 0) fveg(:,:) = 1 - exp(-VAI(:,:))
+if (fveg(1,1) < 0) fveg(:,:) = 1 - exp(-kveg*VAI(:,:))
 if (scap(1,1) < 0) scap(:,:) = cvai*VAI(:,:)
 
 ! Derived soil parameters

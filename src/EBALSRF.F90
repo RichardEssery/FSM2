@@ -2,7 +2,7 @@
 ! Surface energy balance in open areas or zero-layer forest canopy model
 !-----------------------------------------------------------------------
 subroutine EBALSRF(Ds1,KH,KHa,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1, &
-                   Esrf,Eveg,G,H,LE,Melt,Rnet)
+                   Esrf,Eveg,G,H,Hsrf,LE,LEsrf,Melt,Rnet,Rsrf)
 
 #include "OPTS.h"
 
@@ -54,9 +54,12 @@ real, intent(out) :: &
   Eveg(Nx,Ny),       &! Moisture flux from vegetation (kg/m^2/s)
   G(Nx,Ny),          &! Heat flux into surface (W/m^2)
   H(Nx,Ny),          &! Sensible heat flux to the atmosphere (W/m^2)
+  Hsrf(Nx,Ny),       &! Sensible heat flux from the surface (W/m^2)
   LE(Nx,Ny),         &! Latent heat flux to the atmosphere (W/m^2)
+  LEsrf(Nx,Ny),      &! Latent heat flux from the surface (W/m^2)
   Melt(Nx,Ny),       &! Surface melt rate (kg/m^2/s)
-  Rnet(Nx,Ny)         ! Net radiation (W/m^2)
+  Rnet(Nx,Ny),       &! Net radiation (W/m^2)
+  Rsrf(Nx,Ny)         ! Net radiation absorbed by the surface (W/m^2)
 
 integer :: & 
   i,j                 ! Point counters
@@ -150,6 +153,9 @@ do i = 1, Nx
       LE(i,j) = Ls*Esrf(i,j)
       H(i,j) = Rnet(i,j) - G(i,j) - LE(i,j) - Melt(i,j)
     end if
+    Hsrf(i,j) = H(i,j)
+    LEsrf(i,j) = LE(i,j)
+    Rsrf(i,j) = Rnet(i,j)
 
 #if CANMOD == 0
     ! Add fluxes from canopy in zero-layer model

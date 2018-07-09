@@ -108,7 +108,7 @@ Fresh snow has fixed density $\rho_f$, so snowfall over a timestep increases the
 
 \subsection{Shortwave radiation}
 
-Forest structure is defined by canopy height $h$, vegetation area index $\Lambda$ (including leaves and stems) and vegetation fraction $f_v$, which is either parametrized as $1-\exp(-\Lambda)$ or specified as an input. A forest canopy with intercepted snow mass $S_v$ and interception capacity $S_{\rm cap}$ is assumed to have snow cover fraction 
+Forest structure is defined by canopy height $h$, vegetation area index $\Lambda$ (including leaves and stems) and vegetation fraction $f_v$, which is either parametrized as $1-\exp(-k_{\rm veg}\Lambda)$ or specified as an input. A forest canopy with intercepted snow mass $S_v$ and interception capacity $S_{\rm cap}$ is assumed to have snow cover fraction 
 \begin{equation}
 f_{cs} = \frac{S_v}{S_{\rm cap}}
 \end{equation}
@@ -205,7 +205,7 @@ r_{av} = \frac{C_{\rm veg}}{\Lambda u_*^{1/2}}.
 \end{equation}
 $C_{\rm dense}$, $C_{\rm veg}$ and the ratio $z_{0g}/z_{0h}$ between roughness lengths for momentum and heat are constant parameters. In the absence of vegetation ($\Lambda=f_v=0)$, resistances for heat transfer combine to give
 \begin{equation}
-r_h \equiv r_{aa} + r_{ag} = \frac{1}{f_hkU_a^2}\ln\left(\frac{z_U}{z_{0g}}\right)
+r_h \equiv r_{aa} + r_{ag} = \frac{1}{f_hk^2U_a}\ln\left(\frac{z_U}{z_{0g}}\right)
                                                 \ln\left(\frac{z_T}{z_{0h}}\right).
 \label{eq:rh}
 \end{equation}
@@ -577,6 +577,7 @@ Snow viscosity parameter $\eta_b$ & {\tt etab} & 0.018 m$^3$ kg$^{-1}$ \\
 Surface conductance for saturated soil $g_{\rm sat}$ & {\tt gsat} & 0.01 m s$^{-1}$ \\
 Canopy radiation extinction coefficient $k_{\rm ext}$ & {\tt kext} &  0.5 \\
 Fixed snow thermal conductivity $\lambda_0$ & {\tt kfix} & 0.24 W m$^{-1}$ K$^{-1}$ \\
+Canopy cover coefficient $k_{\rm veg}$ & {\tt kveg} &  1 \\
 Displacement height to canopy height ratio $R_d$ & {\tt rchd} & 0.67 \\
 Roughness length to canopy height ratio $R_{z0}$ & {\tt rchz} & 0.1 \\
 Fixed snow density $\rho_0$ & {\tt rho0} & 300 kg m$^{-3}$ \\

@@ -69,6 +69,8 @@ real :: &
   Ric,               &! Sub-canopy Richardson number
   Tint,              &! Interpolated canopy - ground temperature (K)
   ustar,             &! Friction velocity (m/s)
+  zT1,               &! Temperature measurement height with offset (m)
+  zU1,               &! Wind measurement height with offset (m)
   z0,                &! Roughness length for momentum (m)
   z0g,               &! Ground surface roughness length (m)
   z0h,               &! Roughness length for heat (m)
@@ -77,13 +79,24 @@ real :: &
 do j = 1, Ny
 do i = 1, Nx
 
+#if ZOFFST == 0
+! Heights specified above ground
+  zU1 = zU
+  zT1 = zT
+#endif
+#if ZOFFST == 1
+! Heights specified above canopy top
+  zU1 = zU + hcan(i,j)
+  zT1 = zT + hcan(i,j)
+#endif
+
 ! Roughness lengths and friction velocity
   z0g = (z0sn**fsnow(i,j)) * (z0sf(i,j)**(1 - fsnow(i,j)))
   z0v = rchz*hcan(i,j)
   z0  = (z0v**fveg(i,j)) * (z0g**(1 - fveg(i,j)))
   z0h = z0 / z0zh
   dh = fveg(i,j)*rchd*hcan(i,j)
-  CD = (vkman / log((zU - dh)/z0))**2
+  CD = (vkman / log((zU1 - dh)/z0))**2
   ustar = sqrt(CD)*Ua(i,j)
 
 #if EXCHNG == 0
@@ -94,11 +107,11 @@ do i = 1, Nx
 #if EXCHNG == 1
 ! Stability adjustment (Louis et al. 1982, quoted by Beljaars 1992)
   Tint = fveg(i,j)*Tveg(i,j) + (1 - fveg(i,j))*Tsrf(i,j)
-  RiB = grav*(Ta(i,j) - Tint)*(zU - dh)**2 / ((zT - dh)*Ta(i,j)*Ua(i,j)**2)
+  RiB = grav*(Ta(i,j) - Tint)*(zU1 - dh)**2 / ((zT1 - dh)*Ta(i,j)*Ua(i,j)**2)
   if (RiB > 0) then 
     fh = 1/(1 + 3*bstb*RiB*sqrt(1 + bstb*RiB))
   else
-    fh = 1 - 3*bstb*RiB / (1 + 3*bstb**2*CD*sqrt(-RiB*zU/z0))
+    fh = 1 - 3*bstb*RiB / (1 + 3*bstb**2*CD*sqrt(-RiB*zU1/z0))
   end if
   Ric = grav*(Tcan(i,j) - Tsrf(i,j))*hcan(i,j) / (Tcan(i,j)*ustar**2)
   Ric = max(min(Ric,10.),0.)
@@ -106,7 +119,7 @@ do i = 1, Nx
 
 ! Eddy diffusivities
   if (fveg(i,j) == 0) then
-    KH(i,j) = fh*vkman*ustar / log(zT/z0h)
+    KH(i,j) = fh*vkman*ustar / log(zT1/z0h)
     call QSAT(Ps(i,j),Tsrf(i,j),Qs)
     if (Sice(1,i,j) > 0 .or. Qa(i,j) > Qs) then
       KWg(i,j) = KH(i,j)
@@ -114,7 +127,7 @@ do i = 1, Nx
       KWg(i,j) = gs1(i,j)*KH(i,j) / (gs1(i,j) + KH(i,j))
     end if
   else
-    KHa(i,j) = fh*vkman*ustar / log((zT - dh)/z0)
+    KHa(i,j) = fh*vkman*ustar / log((zT1 - dh)/z0)
     KHg(i,j) = vkman*ustar*((1 - fveg(i,j))*fh/log(z0/z0h) + fveg(i,j)*cden/(1 + 0.5*Ric))
     KHv(i,j) = sqrt(ustar)*VAI(i,j)/cveg
     call QSAT(Ps(i,j),Tsrf(i,j),Qs)
@@ -125,7 +138,7 @@ do i = 1, Nx
     end if
     call QSAT(Ps(i,j),Tveg(i,j),Qs)
     if (Sveg(i,j) > 0 .or. Qcan(i,j) > Qs) then
-      KWv(i,j) = KHg(i,j)
+      KWv(i,j) = KHv(i,j)
     else
       KWv(i,j) = gs1(i,j)*KHv(i,j) / (gs1(i,j) + KHv(i,j))
     end if

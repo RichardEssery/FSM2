@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 ! Surface and forest canopy energy balance
 !-----------------------------------------------------------------------
-subroutine EBALFOR(Ds1,KHa,KHg,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1,Tveg0, &
-                   Esrf,Eveg,G,H,LE,Melt,Rnet)
+subroutine EBALFOR(Ds1,KHa,KHg,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1,Tveg0,  &
+                   Esrf,Eveg,G,H,Hsrf,LE,LEsrf,Melt,Rnet,Rsrf)
 
 #include "OPTS.h"
 
@@ -33,8 +33,8 @@ use PARAMMAPS, only: &
 
 use STATE_VARIABLES, only : &
   Qcan,              &! Canopy air space humidity
-  Sveg,              &! Snow mass on vegetation (kg/m^2)
   Sice,              &! Ice content of snow layers (kg/m^2)
+  Sveg,              &! Snow mass on vegetation (kg/m^2)
   Tcan,              &! Canopy air space temperature (K)
   Tsrf,              &! Surface temperature (K)
   Tveg                ! Vegetation temperature (K)
@@ -59,9 +59,12 @@ real, intent(out) :: &
   Eveg(Nx,Ny),       &! Moisture flux from vegetation (kg/m^2/s)
   G(Nx,Ny),          &! Heat flux into surface (W/m^2)
   H(Nx,Ny),          &! Sensible heat flux to the atmosphere (W/m^2)
+  Hsrf(Nx,Ny),       &! Sensible heat flux from the surface (W/m^2)
   LE(Nx,Ny),         &! Latent heat flux to the atmosphere (W/m^2)
+  LEsrf(Nx,Ny),      &! Latent heat flux from the surface (W/m^2)
   Melt(Nx,Ny),       &! Surface melt rate (kg/m^2/s)
-  Rnet(Nx,Ny)         ! Net radiation (W/m^2)
+  Rnet(Nx,Ny),       &! Net radiation (W/m^2)
+  Rsrf(Nx,Ny)         ! Net radiation absorbed by the surface (W/m^2)
 
 integer :: & 
   i,j                 ! Point counters
@@ -84,14 +87,12 @@ real :: &
   dTs,               &! Change in surface temperature (K)
   dTv,               &! Change in vegetation temperature (K)
   E,                 &! Moisture flux to the atmosphere (kg/m^2/s)
-  Hsrf,              &! Sensible heat flux from the surface (W/m^2)
   Hveg,              &! Sensible heat flux from vegetation (W/m^2)
   Lsrf,              &! Latent heat for phase change on the ground (J/kg)
   Lveg,              &! Latent heat for phase change on vegetation (J/kg)
   Qsrf,              &! Saturation humidity at surface temperature
   Qveg,              &! Saturation humidity at vegetation temperature
   rho,               &! Air density (kg/m^3)
-  Rsrf,              &! Net radiation absorbed by the surface (W/m^2)
   Rveg,              &! Net radiation absorbed by vegetation (W/m^2)model
   Ssub                ! Mass of snow available for sublimation (kg/m^2)
 
@@ -118,11 +119,11 @@ do i = 1, Nx
     Eveg(i,j) = rho*KWv(i,j)*(Qveg - Qcan(i,j))
     G(i,j) = 2*ks1(i,j)*(Tsrf(i,j) - Ts1(i,j))/Ds1(i,j)
     H(i,j) = rho*cp*KHa(i,j)*(Tcan(i,j) - Ta(i,j))
-    Hsrf = rho*cp*KHg(i,j)*(Tsrf(i,j) - Tcan(i,j))
+    Hsrf(i,j) = rho*cp*KHg(i,j)*(Tsrf(i,j) - Tcan(i,j))
     Hveg = rho*cp*KHv(i,j)*(Tveg(i,j) - Tcan(i,j))
     LE(i,j) = Lsrf*Esrf(i,j) + Lveg*Eveg(i,j)
     Melt(i,j) = 0
-    Rsrf = SWsrf(i,j) + fsky(i,j)*LW(i,j) - sb*Tsrf(i,j)**4 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
+    Rsrf(i,j) = SWsrf(i,j) + fsky(i,j)*LW(i,j) - sb*Tsrf(i,j)**4 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
     Rveg = SWveg(i,j) + (1 - fsky(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4) 
 
     ! Surface energy balance increments without melt
@@ -130,7 +131,7 @@ do i = 1, Nx
     A(1,2) = - (KHa(i,j) + KHv(i,j) + KHg(i,j))
     A(1,3) = KHg(i,j)
     A(1,4) = KHv(i,j)
-    b(1)   = (H(i,j) - Hveg - Hsrf) / (rho*cp)
+    b(1)   = (H(i,j) - Hveg - Hsrf(i,j)) / (rho*cp)
     A(2,1) = - (KHa(i,j) + KWv(i,j) + KWg(i,j))
     A(2,2) = 0
     A(2,3) = Dsrf*KWg(i,j)
@@ -140,7 +141,7 @@ do i = 1, Nx
     A(3,2) = - rho*cp*KHg(i,j)
     A(3,3) = rho*(cp*KHg(i,j) + Lsrf*Dsrf*KWg(i,j)) + 4*sb*Tsrf(i,j)**3 + 2*ks1(i,j)/Ds1(i,j)
     A(3,4) = - 4*(1 - fsky(i,j))*sb*Tveg(i,j)**3
-    b(3)   = Rsrf - Hsrf - Lsrf*Esrf(i,j) - G(i,j)
+    b(3)   = Rsrf(i,j) - Hsrf(i,j) - Lsrf*Esrf(i,j) - G(i,j)
     A(4,1) = - Lveg*rho*KWv(i,j)
     A(4,2) = - rho*cp*KHv(i,j)
     A(4,3) = -4*(1 - fsky(i,j))*sb*Tsrf(i,j)**3
@@ -160,7 +161,7 @@ do i = 1, Nx
     ! Surface melting
     if (Tsrf(i,j) + dTs > Tm .and. Sice(1,i,j) > 0) then
       Melt(i,j) = sum(Sice(:,i,j)) / dt
-      b(3) = Rsrf - Hsrf - Lsrf*Esrf(i,j) - G(i,j) - Lf*Melt(i,j)
+      b(3) = Rsrf(i,j) - Hsrf(i,j) - Lsrf*Esrf(i,j) - G(i,j) - Lf*Melt(i,j)
       call LUDCMP(4,A,b,x)
       dQc = x(1)
       dTc = x(2)
@@ -175,21 +176,21 @@ do i = 1, Nx
         call QSAT(Ps(i,j),Tm,Qsrf)
         Esrf(i,j) = rho*KWg(i,j)*(Qsrf - Qcan(i,j))
         G(i,j) = 2*ks1(i,j)*(Tm - Ts1(i,j))/Ds1(i,j)
-        Hsrf = rho*cp*KHg(i,j)*(Tm - Tcan(i,j))
-        Rsrf = SWsrf(i,j) + fsky(i,j)*LW(i,j) - sb*Tm**4 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
+        Hsrf(i,j) = rho*cp*KHg(i,j)*(Tm - Tcan(i,j))
+        Rsrf(i,j) = SWsrf(i,j) + fsky(i,j)*LW(i,j) - sb*Tm**4 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
         Rveg = SWveg(i,j) + (1 - fsky(i,j))*(LW(i,j) + sb*Tm**4 - 2*sb*Tveg(i,j)**4) 
         A(1,3) = 0
-        b(1)   = (H(i,j) - Hveg - Hsrf) / (rho*cp)
+        b(1)   = (H(i,j) - Hveg - Hsrf(i,j)) / (rho*cp)
         A(2,3) = 0
         b(2)   = (E - Eveg(i,j) - Esrf(i,j)) / rho
         A(3,3) = 1
-        b(3)   = Rsrf - Hsrf - Lsrf*Esrf(i,j) - G(i,j)
+        b(3)   = Rsrf(i,j) - Hsrf(i,j) - Lsrf*Esrf(i,j) - G(i,j)
         A(4,3) = 0
         b(4)   = Rveg - Hveg - Lveg*Eveg(i,j) - canh(i,j)*(Tveg(i,j) - Tveg0(i,j))/dt
         call LUDCMP(4,A,b,x)
         dQc = x(1)
         dTc = x(2)
-        Melt = x(3) / Lf
+        Melt(i,j) = x(3) / Lf
         dTv = x(4)
         dTs = Tm - Tsrf(i,j)
         dEs = 0
@@ -207,16 +208,20 @@ do i = 1, Nx
     Tveg(i,j) = Tveg(i,j) + dTv
     Esrf(i,j) = Esrf(i,j) + dEs
     Eveg(i,j) = Eveg(i,j) + dEv
+    Hsrf(i,j) = Hsrf(i,j) + dHs
+    Hveg = Hveg + dHv
     G(i,j) = G(i,j) + dGs
-    H(i,j) = Hsrf + dHs + Hveg + dHv
+    H(i,j) = Hsrf(i,j) + Hveg
     LE(i,j) = Lsrf*Esrf(i,j) + Lveg*Eveg(i,j)
+    LEsrf(i,j) = Lsrf*Esrf(i,j)
     Rnet(i,j) = SWsrf(i,j) + SWveg(i,j) + LW(i,j) - fsky(i,j)*sb*Tsrf(i,j)**4 - (1 - fsky(i,j))*sb*Tveg(i,j)**4
 
     ! Sublimation limited by amount of snow after melt
     Ssub = sum(Sice(:,i,j)) - Melt(i,j)*dt
     if (Ssub > 0 .and. Esrf(i,j)*dt > Ssub) then
       Esrf(i,j) = Ssub / dt
-      Hsrf = Rnet(i,j) - G(i,j) - Ls*Esrf(i,j) - Melt(i,j)
+      LEsrf(i,j) = Ls*Esrf(i,j)
+      Hsrf(i,j) = Rnet(i,j) - G(i,j) - LEsrf(i,j) - Melt(i,j)
     end if
 
   end if
