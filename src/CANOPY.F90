@@ -36,7 +36,7 @@ real, intent(out) :: &
 real :: &
   intcpt,            &! Canopy interception (kg/m^2)
   Evegs,             &! Canopy snow sublimation rate (kg/m^2/s)
-  tcan                ! Canopy snow unloading timescale (s)
+  tunl                ! Canopy snow unloading timescale (s)
 
 integer :: & 
   i,j                 ! Grid coordinates
@@ -58,10 +58,10 @@ do i = 1, Nx
     Sveg(i,j) = max(Sveg(i,j), 0.)
 
   ! unloading
-    tcan = tcnc
-    if (Tveg(i,j) >= Tm) tcan = tcnm
-    tcan = max(tcan, dt)
-    unload(i,j) = Sveg(i,j)*dt/tcan
+    tunl = tcnc
+    if (Tveg(i,j) >= Tm) tunl = tcnm
+    tunl = max(tunl, dt)
+    unload(i,j) = Sveg(i,j)*dt/tunl
     Sveg(i,j) = Sveg(i,j) - unload(i,j)
 
   end if

@@ -28,8 +28,8 @@ use GRID, only: &
 
 use PARAMMAPS, only: &
   canh,              &! Canopy heat capacity (J/K/m^2)
-  fsky,              &! Sky view fraction
-  fveg                ! Canopy cover fraction
+  fveg,              &! Canopy cover fraction
+  trcn                ! Canopy transmissivity
 
 use STATE_VARIABLES, only : &
   Qcan,              &! Canopy air space humidity
@@ -123,8 +123,8 @@ do i = 1, Nx
     Hveg = rho*cp*KHv(i,j)*(Tveg(i,j) - Tcan(i,j))
     LE(i,j) = Lsrf*Esrf(i,j) + Lveg*Eveg(i,j)
     Melt(i,j) = 0
-    Rsrf(i,j) = SWsrf(i,j) + fsky(i,j)*LW(i,j) - sb*Tsrf(i,j)**4 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
-    Rveg = SWveg(i,j) + (1 - fsky(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4) 
+    Rsrf(i,j) = SWsrf(i,j) + trcn(i,j)*LW(i,j) - sb*Tsrf(i,j)**4 + (1 - trcn(i,j))*sb*Tveg(i,j)**4
+    Rveg = SWveg(i,j) + (1 - trcn(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4) 
 
     ! Surface energy balance increments without melt
     A(1,1) = 0
@@ -140,12 +140,12 @@ do i = 1, Nx
     A(3,1) = - Lsrf*rho*KWg(i,j)
     A(3,2) = - rho*cp*KHg(i,j)
     A(3,3) = rho*(cp*KHg(i,j) + Lsrf*Dsrf*KWg(i,j)) + 4*sb*Tsrf(i,j)**3 + 2*ks1(i,j)/Ds1(i,j)
-    A(3,4) = - 4*(1 - fsky(i,j))*sb*Tveg(i,j)**3
+    A(3,4) = - 4*(1 - trcn(i,j))*sb*Tveg(i,j)**3
     b(3)   = Rsrf(i,j) - Hsrf(i,j) - Lsrf*Esrf(i,j) - G(i,j)
     A(4,1) = - Lveg*rho*KWv(i,j)
     A(4,2) = - rho*cp*KHv(i,j)
-    A(4,3) = -4*(1 - fsky(i,j))*sb*Tsrf(i,j)**3
-    A(4,4) = canh(i,j)/dt + rho*(cp*KHv(i,j) + Lveg*Dveg*KWv(i,j)) + 8*(1 - fsky(i,j))*sb*Tveg(i,j)**3
+    A(4,3) = -4*(1 - trcn(i,j))*sb*Tsrf(i,j)**3
+    A(4,4) = canh(i,j)/dt + rho*(cp*KHv(i,j) + Lveg*Dveg*KWv(i,j)) + 8*(1 - trcn(i,j))*sb*Tveg(i,j)**3
     b(4)   = Rveg - Hveg - Lveg*Eveg(i,j) - canh(i,j)*(Tveg(i,j) - Tveg0(i,j))/dt
     call LUDCMP(4,A,b,x)
     dQc = x(1)
@@ -177,8 +177,8 @@ do i = 1, Nx
         Esrf(i,j) = rho*KWg(i,j)*(Qsrf - Qcan(i,j))
         G(i,j) = 2*ks1(i,j)*(Tm - Ts1(i,j))/Ds1(i,j)
         Hsrf(i,j) = rho*cp*KHg(i,j)*(Tm - Tcan(i,j))
-        Rsrf(i,j) = SWsrf(i,j) + fsky(i,j)*LW(i,j) - sb*Tm**4 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
-        Rveg = SWveg(i,j) + (1 - fsky(i,j))*(LW(i,j) + sb*Tm**4 - 2*sb*Tveg(i,j)**4) 
+        Rsrf(i,j) = SWsrf(i,j) + trcn(i,j)*LW(i,j) - sb*Tm**4 + (1 - trcn(i,j))*sb*Tveg(i,j)**4
+        Rveg = SWveg(i,j) + (1 - trcn(i,j))*(LW(i,j) + sb*Tm**4 - 2*sb*Tveg(i,j)**4) 
         A(1,3) = 0
         b(1)   = (H(i,j) - Hveg - Hsrf(i,j)) / (rho*cp)
         A(2,3) = 0
@@ -214,14 +214,15 @@ do i = 1, Nx
     H(i,j) = Hsrf(i,j) + Hveg
     LE(i,j) = Lsrf*Esrf(i,j) + Lveg*Eveg(i,j)
     LEsrf(i,j) = Lsrf*Esrf(i,j)
-    Rnet(i,j) = SWsrf(i,j) + SWveg(i,j) + LW(i,j) - fsky(i,j)*sb*Tsrf(i,j)**4 - (1 - fsky(i,j))*sb*Tveg(i,j)**4
+    Rnet(i,j) = SWsrf(i,j) + SWveg(i,j) +  &
+                LW(i,j) - trcn(i,j)*sb*Tsrf(i,j)**4 - (1 - trcn(i,j))*sb*Tveg(i,j)**4
 
     ! Sublimation limited by amount of snow after melt
     Ssub = sum(Sice(:,i,j)) - Melt(i,j)*dt
     if (Ssub > 0 .and. Esrf(i,j)*dt > Ssub) then
       Esrf(i,j) = Ssub / dt
       LEsrf(i,j) = Ls*Esrf(i,j)
-      Hsrf(i,j) = Rnet(i,j) - G(i,j) - LEsrf(i,j) - Melt(i,j)
+      Hsrf(i,j) = Rnet(i,j) - G(i,j) - LEsrf(i,j) - Lf*Melt(i,j)
     end if
 
   end if

@@ -27,8 +27,8 @@ use GRID, only: &
   Nx,Ny               ! Grid dimensions
 
 use PARAMMAPS, only: &
-  fsky,              &! Sky view fraction
-  fveg                ! Canopy cover fraction
+  fveg,              &! Canopy cover fraction
+  trcn                ! Canopy transmissivity
 
 use STATE_VARIABLES, only: &
   Sice,              &! Ice content of snow layers (kg/m^2)
@@ -89,8 +89,8 @@ do i = 1, Nx
 
     ! Saturation humidity and density of air
     call QSAT(Ps(i,j),Tsrf(i,j),Qs)
-    Lh = Ls
-    if (Tsrf(i,j) > Tm) Lh = Lv
+    Lh = Lv
+    if (Tsrf(i,j) < Tm .or. Sice(1,i,j) > 0) Lh = Ls
     D = Lh*Qs/(Rwat*Tsrf(i,j)**2)
     rho = Ps(i,j) / (Rair*Ta(i,j))
 
@@ -100,8 +100,8 @@ do i = 1, Nx
     H(i,j) = cp*rho*KH(i,j)*(Tsrf(i,j) - Ta(i,j))
     LE(i,j) = Lh*Esrf(i,j)
     Melt(i,j) = 0
-    Rnet(i,j) = SWsrf(i,j) + fsky(i,j)*LW(i,j) - sb*Tsrf(i,j)**4  &
-                           + (1 - fsky(i,j))*sb*Tveg(i,j)**4
+    Rnet(i,j) = SWsrf(i,j) + trcn(i,j)*LW(i,j) - sb*Tsrf(i,j)**4  &
+                           + (1 - trcn(i,j))*sb*Tveg(i,j)**4
 
     ! Surface energy balance increments without melt
     dTs = (Rnet(i,j) - G(i,j) - H(i,j) - LE(i,j)) /  &
@@ -115,7 +115,7 @@ do i = 1, Nx
     if (Tsrf(i,j) + dTs > Tm .and. Sice(1,i,j) > 0) then
       Melt(i,j) = sum(Sice(:,i,j))/dt
       dTs = (Rnet(i,j) - G(i,j) - H(i,j) - LE(i,j) - Lf*Melt(i,j)) /  &
-            (4*sb*Tsrf(i,j)**3 + 2*ks1(i,j)/Ds1(i,j) + rho*(cp*KH(i,j) + Lh*D*KWg(i,j)))
+            (4*sb*Tsrf(i,j)**3 + 2*ks1(i,j)/Ds1(i,j) + rho*(cp*KH(i,j) + Ls*D*KWg(i,j)))
       dE = rho*KWg(i,j)*D*dTs
       dG = 2*ks1(i,j)*dTs/Ds1(i,j)
       dH = cp*rho*KH(i,j)*dTs
@@ -126,8 +126,8 @@ do i = 1, Nx
           G(i,j) = 2*ks1(i,j)*(Tm - Ts1(i,j))/Ds1(i,j)
           H(i,j) = cp*rho*KH(i,j)*(Tm - Ta(i,j))
           LE(i,j) = Ls*Esrf(i,j)
-          Rnet(i,j) = SWsrf(i,j) + fsky(i,j)*LW(i,j) - sb*Tm**4  &
-                                 + (1 - fsky(i,j))*sb*Tveg(i,j)**4
+          Rnet(i,j) = SWsrf(i,j) + trcn(i,j)*LW(i,j) - sb*Tm**4  &
+                                 + (1 - trcn(i,j))*sb*Tveg(i,j)**4
           Melt(i,j) = (Rnet(i,j) - H(i,j) - LE(i,j) - G(i,j)) / Lf
           Melt(i,j) = max(Melt(i,j), 0.)
           dE = 0
@@ -136,6 +136,7 @@ do i = 1, Nx
           dR = 0
           dTs = Tm - Tsrf(i,j)
       end if
+
     end if
 
     ! Update surface temperature and fluxes
@@ -151,7 +152,7 @@ do i = 1, Nx
     if (Ssub > 0 .and. Esrf(i,j)*dt > Ssub) then
       Esrf(i,j) = Ssub / dt
       LE(i,j) = Ls*Esrf(i,j)
-      H(i,j) = Rnet(i,j) - G(i,j) - LE(i,j) - Melt(i,j)
+      H(i,j) = Rnet(i,j) - G(i,j) - LE(i,j) - Lf*Melt(i,j)
     end if
     Hsrf(i,j) = H(i,j)
     LEsrf(i,j) = LE(i,j)
@@ -167,7 +168,7 @@ do i = 1, Nx
       if (Tveg(i,j) > Tm) Lh = Lv
       LE(i,j) = LE(i,j) + Lh*Eveg(i,j)
       Rnet(i,j) = Rnet(i,j) + SWveg(i,j) +  &
-                  (1 - fsky(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4)
+                  (1 - trcn(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4)
     end if
 #endif
 #if CANMOD == 1

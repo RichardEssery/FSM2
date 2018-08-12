@@ -55,6 +55,10 @@ real :: &
   dt,                &! Timestep (s)
   lat,               &! Latitude (radians)
   noon,              &! Local offset from solar noon (hours)
+  Pscl,              &! Precipitation adjustment scale (1/km)
+  Tlps,              &! Temperature lapse rate (K/km)
+  Tsnw,              &! Snow threshold temperature (K)
+  zaws,              &! Weather station elevation for downscaling (m)
   zT,                &! Temperature measurement height (m)
   zU                  ! Wind speed measurement height (m)
 real, allocatable :: &
@@ -78,7 +82,8 @@ integer :: &
   Nx,Ny               ! Grid dimensions
 real, allocatable :: &
   Dzsnow(:),         &! Minimum snow layer thicknesses (m)
-  Dzsoil(:)           ! Soil layer thicknesses (m)
+  Dzsoil(:),         &! Soil layer thicknesses (m)
+  ztop(:,:)           ! Land surface elevations (m)
 end module GRID
 
 !-----------------------------------------------------------------------
@@ -108,6 +113,7 @@ real :: &
   avgs,              &! Snow-covered vegetation albedo
   cden,              &! Dense canopy turbulent transfer coefficient
   cvai,              &! Canopy snow capacity per unit VAI (kg/m^2)
+  gsnf,              &! Snow-free vegetation moisture conductance (m/s)
   kext,              &! Canopy radiation extinction coefficient
   kveg,              &! Canopy cover coefficient
   cveg,              &! Vegetation turbulent transfer coefficient
@@ -160,6 +166,7 @@ real, allocatable :: &
   fveg(:,:),         &! Canopy cover fraction
   hcan(:,:),         &! Canopy height (m)
   scap(:,:),         &! Canopy snow capacity (kg/m^2)
+  trcn(:,:),         &! Canopy transmissivity
   VAI(:,:),          &! Vegetation area index
   z0sf(:,:)           ! Snow-free roughness length (m)
 end module PARAMMAPS

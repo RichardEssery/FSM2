@@ -33,8 +33,10 @@ character(len=70) :: &
   fveg_file,         &! Canopy cover fraction map file name
   hcan_file,         &! Canopy height map file name
   scap_file,         &! Canopy snow capacity map file name
+  trcn_file,         &! Canopy transmissivity map file name
   VAI_file,          &! Vegetation area index map file name
-  z0sf_file           ! Snow-free roughness length map file name
+  z0sf_file,         &! Snow-free roughness length map file name
+  ztop_file           ! DEM file name
 
 integer :: & 
   i,j,               &! Point counters
@@ -48,29 +50,39 @@ real, allocatable :: &
   fsat(:),           &! Initial moisture content of soil layers as fractions of saturation
   Tprof(:)            ! Initial soil layer temperatures (K)
 
-namelist /drive/ met_file,dt,lat,noon,zT,zU
-namelist /gridpnts/ Nsmax,Nsoil,Nx,Ny
+namelist    /drive/ met_file,dt,lat,noon,Tlps,Tsnw,zaws,zT,zU
+namelist /gridpnts/ Nsmax,Nsoil,Nx,Ny,ztop_file
 namelist /gridlevs/ Dzsnow,Dzsoil
-namelist /initial/ fsat,Tprof,start_file
-namelist /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,VAI,z0sf,  &
-                alb0_file,canh_file,fcly_file,fsnd_file,fsky_file, &
-                fveg_file,hcan_file,scap_file,VAI_file,z0sf_file 
-namelist /outputs/ Nave,Nsmp,ave_file,dmp_file,smp_file,runid
-namelist /params/ asmx,asmn,avg0,avgs,bstb,bthr,cden,cvai,cveg,eta0,etaa,etab,gsat,hfsn,  &
-                  kext,kfix,kveg,Nitr,rchd,rchz,rho0,rhoc,rhof,rcld,rmlt,Salb,snda,sndb,  &
-                  sndc,Talb,tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn,z0zh
+namelist  /initial/ fsat,Tprof,start_file
+namelist     /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,VAI,z0sf,            &
+                    alb0_file,canh_file,fcly_file,fsnd_file,fsky_file,fveg_file, &
+                    hcan_file,scap_file,trcn_file,VAI_file,z0sf_file 
+namelist  /outputs/ Nave,Nsmp,ave_file,dmp_file,smp_file,runid
+namelist   /params/ asmx,asmn,avg0,avgs,bstb,bthr,cden,cvai,cveg,eta0,etaa,etab,gsat,gsnf,  &
+                    hfsn,kext,kfix,kveg,Nitr,rchd,rchz,rho0,rhoc,rhof,rcld,rmlt,Salb,snda,  &
+                    sndb,sndc,Talb,tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn,z0zh
 
 ! Grid parameters
 Nx = 1
 Ny = 1
 Nsmax = 3
 Nsoil = 4
+ztop_file = 'none'
 read(5, gridpnts)
 allocate(Dzsnow(Nsmax))
 allocate(Dzsoil(Nsoil))
 if (Nsmax == 3) Dzsnow = (/0.1, 0.2, 0.4/)
 if (Nsoil == 4) Dzsoil = (/0.1, 0.2, 0.4, 0.8/)
 read(5, gridlevs)
+#if DOWNSC == 1
+if (ztop_file == 'none') stop 'DEM required'
+#if DEMHDR == 0
+allocate(ztop(Nx,Ny))
+call READMAPS(ztop_file,ztop)
+#else
+call READ_DEM(ztop_file)
+#endif
+#endif
 
 ! Driving data
 met_file = 'met'
@@ -79,8 +91,11 @@ lat = 0
 noon = 0
 zT = 2
 zU = 10
+Pscl = 0.35
+Tlps = 6.5
+Tsnw = 2
+zaws = 0
 read(5,drive)
-lat = (3.14159/180)*lat  ! convert latitude to radians
 open(umet, file = met_file)
 allocate(LW(Nx,Ny))
 allocate(Ps(Nx,Ny))
@@ -90,6 +105,11 @@ allocate(Sf(Nx,Ny))
 allocate(SW(Nx,Ny))
 allocate(Ta(Nx,Ny))
 allocate(Ua(Nx,Ny))
+! Convert units
+lat = (3.14159/180)*lat  ! degress to radians
+Pscl = 1e-3*Pscl         ! 1/km to 1/m
+Tlps = 1e-3*Tlps         ! K/km to K/m
+Tsnw = Tsnw + Tm         ! C to K
 
 ! Defaults for numerical solution parameters
 Nitr = 4
@@ -100,6 +120,7 @@ avgs = 0.4
 cden = 0.004
 cvai = 4.4
 cveg = 20
+gsnf = 0
 kext = 0.5
 kveg = 1
 rchd = 0.67
@@ -153,6 +174,7 @@ allocate(fsky(Nx,Ny))
 allocate(fveg(Nx,Ny))
 allocate(hcan(Nx,Ny))
 allocate(scap(Nx,Ny))
+allocate(trcn(Nx,Ny))
 allocate(VAI(Nx,Ny))
 allocate(z0sf(Nx,Ny))
 alb0_file = 'none'
@@ -163,16 +185,18 @@ fsky_file = 'none'
 fveg_file = 'none'
 hcan_file = 'none'
 scap_file = 'none'
+trcn_file = 'none'
 VAI_file  = 'none'
 z0sf_file = 'none'
 alb0(:,:) = 0.2
 canh(:,:) = -1
 fcly(:,:) = 0.3
 fsnd(:,:) = 0.6
-fsky(:,:) = -1
+fsky(:,:) = 1
 fveg(:,:) = -1
 hcan(:,:) = 0
 scap(:,:) = -1
+trcn(:,:) = -1
 VAI(:,:)  = 0
 z0sf(:,:) = 0.1
 read(5,maps)
@@ -184,10 +208,11 @@ call READMAPS(fsky_file,fsky)
 call READMAPS(fveg_file,fveg)
 call READMAPS(hcan_file,hcan)
 call READMAPS(scap_file,scap)
+call READMAPS(trcn_file,trcn)
 call READMAPS(VAI_file,VAI)
 call READMAPS(z0sf_file,z0sf)
 if (canh(1,1) < 0) canh(:,:) = 2500*VAI(:,:)
-if (fsky(1,1) < 0) fsky(:,:) = exp(-kext*VAI(:,:))
+if (trcn(1,1) < 0) trcn(:,:) = exp(-kext*VAI(:,:))
 if (fveg(1,1) < 0) fveg(:,:) = 1 - exp(-kveg*VAI(:,:))
 if (scap(1,1) < 0) scap(:,:) = cvai*VAI(:,:)
 

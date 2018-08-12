@@ -22,7 +22,14 @@ use DRIVING, only: &
   Sf,                &! Snowfall rate (kg/m2/s)
   SW,                &! Incoming shortwave radiation (W/m2)
   Ta,                &! Air temperature (K)
-  Ua                  ! Wind speed (m/s)
+  Ua,                &! Wind speed (m/s)
+  Pscl,              &! Precipitation adjustment scale (1/km)
+  Tlps,              &! Temperature lapse rate (K/km)
+  Tsnw,              &! Snow threshold temperature (K)
+  zaws                ! Weather station elevation for downscaling (m)
+
+use GRID, only: &
+  Nx,Ny               ! Grid dimensions
 
 use IOUNITS, only: &
   umet                ! Driving file unit number
@@ -31,6 +38,9 @@ implicit none
 
 logical, intent(out) :: &
   EoR                 ! End-of-run flag
+
+integer :: & 
+  i,j                 ! Point counters
 
 ! Point driving data
 real :: &
@@ -71,6 +81,20 @@ Sf(:,:) = Sfp
 SW(:,:) = SWp 
 Ta(:,:) = Tap
 Ua(:,:) = Uap
+
+#if DOWNSC == 1
+do j = 1, Ny
+do i = 1, Nx
+  Ta(i,j) = Tap - Tlps*(ztop(i,j) - zaws)
+  Rf(i,j) = (Rfp + Sfp)*(1 + Pscl*(ztop(i,j) - zaws))/(1 - Pscl*(ztop(i,j) - zaws))
+  Sf(i,j) = 0
+  if (Ta(i,j) < Tsnw) then
+    Sf(i,j) = Rf(i,j)
+    Rf(i,j) = 0
+  end if
+end do
+end do
+#endif
 
 return
 

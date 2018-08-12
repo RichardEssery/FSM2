@@ -24,6 +24,7 @@ use PARAMETERS, only : &
   bstb,              &! Atmospheric stability parameter
   cden,              &! Dense canopy turbulent transfer coefficient
   cveg,              &! Vegetation turbulent transfer coefficient
+  gsnf,              &! Snow-free vegetation moisture conductance (m/s)
   rchd,              &! Ratio of displacement height to canopy height
   rchz,              &! Ratio of roughness length to canopy height
   z0sn,              &! Snow roughness length (m)
@@ -140,7 +141,7 @@ do i = 1, Nx
     if (Sveg(i,j) > 0 .or. Qcan(i,j) > Qs) then
       KWv(i,j) = KHv(i,j)
     else
-      KWv(i,j) = gs1(i,j)*KHv(i,j) / (gs1(i,j) + KHv(i,j))
+      KWv(i,j) = gsnf*KHv(i,j) / (gsnf + KHv(i,j))
     end if
 #if CANMOD == 0
 ! Combined resistances for 0-layer canopy model

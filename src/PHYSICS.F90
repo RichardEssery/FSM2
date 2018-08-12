@@ -26,7 +26,6 @@ real :: &
 real :: &
   alb(Nx,Ny),        &! Albedo
   Ds1(Nx,Ny),        &! Surface layer thickness (m)
-  fcans(Nx,Ny),      &! Canopy snowcover fraction
   fsnow(Nx,Ny),      &! Ground snowcover fraction
   gs1(Nx,Ny),        &! Surface moisture conductance (m/s)
   ks1(Nx,Ny),        &! Surface thermal conductivity (W/m/K)
@@ -63,7 +62,7 @@ real :: &
 integer :: & 
   n                   ! Iteration counter
 
-call SWRAD(alb,fcans,fsnow,SWsrf,SWveg)
+call RADIATION(alb,fsnow,SWsrf,SWveg)
 
 call THERMAL(csoil,Ds1,gs1,ks1,ksnow,ksoil,Ts1,Tveg0)
 

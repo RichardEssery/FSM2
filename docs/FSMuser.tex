@@ -25,6 +25,14 @@ Option number & Description & Options \\
 & 0 - FSM format \\
 & & 1 - ESM-SnowMIP format \\
 \hline
+{\tt DOWNSC} & 1D driving data downscaling
+& 0 - no \\
+& & 1 - yes \\
+\hline
+{\tt DEMHDR} & Header information in DEM for downscaling
+& 0 - none \\
+& & 1 - ESRI format \\
+\hline
 {\tt SWPART} & SW radiation partition
 & 0 - Total SW radation used \\
 & & 1 - Difuse and direct SW calculated \\
@@ -72,7 +80,6 @@ Option number & Description & Options \\
 FSM2 requires meteorological driving data and namelists to set options and parameters. The model is run with the commands {\tt ./FSM2 < nlst.txt} or {\tt FSM2.exe < nlst.txt}, where {\tt nlst.txt} is a text file containing eight namelists described in tables below. All of the namelists have to be present in the order of the tables, but any or all of the variables listed in a namelist can be omitted; defaults are then used.
 
 
-
 \subsection*{Grid dimensions namelist {\tt \&gridpnts}}
 FSM2 can be run at a point, at a sequence of points, with a range of surface characteristics or on a rectangular grid by selecting values for dimensions {\tt Nx} and {\tt Ny}. 
 
@@ -80,12 +87,15 @@ FSM2 can be run at a point, at a sequence of points, with a range of surface cha
 \hline
 Variable & Default & Description \\
 \hline
-{\tt Nsmax} & 3 & Maximum number of snow layers \\
-{\tt Nsoil} & 4 & Number of soil layers \\
-{\tt Nx}    & 1 & Number of grid points in x direction or sequence \\
-{\tt Ny}    & 1 & Number of grid points in y direction \\
+{\tt Nsmax}      & 3    & Maximum number of snow layers                    \\
+{\tt Nsoil}      & 4    & Number of soil layers                            \\
+{\tt Nx}         & 1    & Number of grid points in x direction or sequence \\
+{\tt Ny}         & 1    & Number of grid points in y direction             \\
+{\tt ztop\_file} & none & DEM file name                                    \\
 \hline
 \end{tabular}
+
+A DEM file has to be specified if FSM2 is complied with {\tt DOWNSC=1}. If the DEM file contains header information ({\tt DEMHDR=1}), it overwrites {\tt Nx} and {\tt Ny} from {\tt \&gridpnts}.
 
 \subsection*{Model levels namelist {\tt \&gridlevs}}
 Snow and soil layers are numbered and listed from the top downwards. If layer thicknesses are specified in {\tt \&gridlevs}, they must match the numbers of layers specified in {\tt \&gridpnts}.
@@ -99,16 +109,23 @@ Variable & Default & Units & Description \\
 \hline
 \end{tabular}
 
-\subsection*{Driving data namelist {\tt \&drive} and data files}
+\subsection*{Driving data namelist {\tt \&drive} and driving data files}
 
 \begin{tabular}{|l|l|l|}
 \hline
-Variable        & Default & Description                                 \\
+Variable & Default & Description \\
 \hline
 {\tt met\_file} & 'met'   & Driving data file name                      \\
 {\tt dt}        & 3600 s  & Timestep                                    \\
 {\tt zT}        & 2 m     & Temperature and humidity measurement height \\
 {\tt zU}        & 10 m    & Wind speed measurement height               \\
+\hline
+\multicolumn{3}{|c|}{Required for 1D downscaling option {\tt DOWNSC=1}} \\
+\hline
+{\tt Pscl}      & 0.35 km$^{-1}$  & Precipitation adjustment scale      \\
+{\tt Tlps}      & 6.5 K km$^{-1}$ & Temperature lapse rate              \\
+{\tt Tsnw}      & 2$^\circ$C      & Snow threshold temperature          \\
+{\tt zaws}      & 0 m     & Weather station elevation for downscaling   \\
 \hline 
 \end{tabular}
 
@@ -116,20 +133,20 @@ Measurement heights are specified above the ground if FSM2 is compiled with {\tt
 
 \begin{tabular}{|l|l|l|}
 \hline
-Variable & Units                & Description                  \\
+Variable & Units & Description  \\
 \hline
-{\tt year}  & years             & Year                         \\
-{\tt month} & months            & Month of the year            \\
-{\tt day}   & days              & Day of the month             \\
-{\tt hour}  & years             & Hour of the day              \\
-{\tt SW} & W m$^{-2}$           & Incoming shortwave radiation \\
-{\tt LW} & W m$^{-2}$           & Incoming longwave radiation  \\
-{\tt Sf} & kg m$^{-2}$ s$^{-1}$ & Snowfall rate                \\
-{\tt Rf} & kg m$^{-2}$ s$^{-1}$ & Rainfall rate                \\
-{\tt Ta} & K                    & Air temperature              \\
-{\tt RH} & \%                   & Relative humidity            \\
-{\tt Ua} & m s$^{-1}$           & Wind speed                   \\
-{\tt Ps} & Pa                   & Surface air pressure         \\
+{\tt year}  & years    & Year                         \\
+{\tt month} & months   & Month of the year            \\
+{\tt day}   & days     & Day of the month             \\
+{\tt hour}  & years    & Hour of the day              \\
+{\tt SW} & W m$^{-2}$  & Incoming shortwave radiation \\
+{\tt LW} & W m$^{-2}$  & Incoming longwave radiation  \\
+{\tt Sf} & kg m$^{-2}$ s$^{-1}$ & Snowfall rate       \\
+{\tt Rf} & kg m$^{-2}$ s$^{-1}$ & Rainfall rate       \\
+{\tt Ta} & K           & Air temperature              \\
+{\tt RH} & \%          & Relative humidity            \\
+{\tt Ua} & m s$^{-1}$  & Wind speed                   \\
+{\tt Ps} & Pa          & Surface air pressure         \\
 \hline 
 \end{tabular}
 
@@ -146,7 +163,7 @@ Parameter & Default & Description \\
 \hline 
 {\tt asmx} & 0.8    & Maximum albedo for fresh snow                      \\
 {\tt asmn} & 0.5    & Minimum albedo for melting snow                    \\
-{\tt gsat} & 0.01 m $s^{-1}$ & Surface conductance for saturated soil    \\
+{\tt gsat} & 0.01 m s$^{-1}$ & Surface conductance for saturated soil    \\
 {\tt hfsn} & 0.1 m  & Snow cover fraction depth scale                    \\
 {\tt Nitr} & 4      & Number of iterations in energy balance calculation \\
 {\tt z0zh} & 10     & Ratio of roughness lengths for momentum and heat   \\
@@ -217,6 +234,7 @@ Parameter & Default & Description \\
 {\tt cden} & 0.004           & Dense canopy turbulent transfer coefficient  \\
 {\tt cvai} & 4.4 kg m$^{-2}$ & Canopy snow capacity per unit VAI            \\
 {\tt cveg} & 20              & Vegetation turbulent transfer coefficient    \\
+{\tt gsnf} & 0 m s$^{-1}$    & Snow-free vegetation moisture conductance    \\
 {\tt kext} & 0.5             & Canopy radiation extinction coefficient      \\
 {\tt kveg} & 1.0             & Canopy cover coefficient                     \\
 {\tt rchd} & 0.67            & Displacement height to canopy height ratio   \\
@@ -230,17 +248,18 @@ Parameter & Default & Description \\
 
 \begin{tabular}{|l|l|l|}
 \hline
-Parameter   & Default              & Description                                \\
+Parameter & Default & Description \\
 \hline
-{\tt alb0}  & 0.2                  & Snow-free ground albedo                    \\
-{\tt canh}  & 2500 {\tt VAI}       & Canopy heat capacity (J K$^{-1}$ m$^{-2}$) \\
-{\tt fcly}  & 0.3                  & Soil clay fraction                         \\
-{\tt fsnd}  & 0.6                  & Soil sand fraction                         \\
-{\tt fsky}  & {\tt exp(-kext VAI)} & Sky view fraction                          \\
-{\tt fveg}  & {\tt 1 - exp(-kveg VAI)}  & Canopy cover fraction                 \\
-{\tt hcan}  & 0                    & Canopy height (m)                          \\
-{\tt VAI}   & 0                    & Vegetation area index                      \\
-{\tt z0sf}  & 0.1                  & Snow-free ground roughness length          \\
+{\tt alb0}  & 0.2             & Snow-free ground albedo                    \\
+{\tt canh}  & 2500 {\tt VAI}  & Canopy heat capacity (J K$^{-1}$ m$^{-2}$) \\
+{\tt fcly}  & 0.3             & Soil clay fraction                         \\
+{\tt fsnd}  & 0.6             & Soil sand fraction                         \\
+{\tt fsky}  & 1               & Sky view fraction                          \\
+{\tt fveg}  & {\tt 1 - exp(-kveg VAI)}  & Canopy cover fraction            \\
+{\tt hcan}  & 0               & Canopy height (m)                          \\
+{\tt trcn}  & {\tt exp(-kext VAI)}  & Canopy transmissivity                \\
+{\tt VAI}   & 0               & Vegetation area index                      \\
+{\tt z0sf}  & 0.1             & Snow-free ground roughness length          \\
 \hline 
 \end{tabular}
 
@@ -262,11 +281,11 @@ Sky view can be set independently of vegetation cover to allow for grid cells sh
 
 \begin{tabular}{|l|l|l|}
 \hline
-Variable          & Default & Description                                                        \\
+Variable & Default & Description \\
 \hline
-{\tt start\_file} & {\tt 'none'}  & Start file name                                                    \\
-{\tt fsat}        & 4*0.5         & Initial moisture content of soil layers as fractions of saturation \\
-{\tt Tsoil}       & 4*285         & Initial temperature of soil layers                                 \\
+{\tt start\_file}  & {\tt 'none'}  & Start file name                                      \\
+{\tt fsat}  & 4*0.5  & Initial moisture content of soil layers as fractions of saturation \\
+{\tt Tsoil} & 4*285  & Initial temperature of soil layers                                 \\
 
 \hline 
 \end{tabular}
@@ -275,7 +294,7 @@ Soil temperature and moisture content are taken from the namelist and FSM2 is in
 
 \begin{tabular}{|l|l|l|}
 \hline
-Variable    & Units        & Description                                \\
+Variable & Units & Description \\
 \hline
 {\tt albs(Nx,Ny)}        & -            & Albedo of snow                             \\
 {\tt Ds(Nsmax,Nx,Ny)}    & m            & Thickness of snow layers                   \\
@@ -299,12 +318,12 @@ The easiest way to generate a start file is to spin up the model by running it f
 
 \begin{tabular}{|l|l|l|}
 \hline
-Variable         & Default      & Description                             \\
+Variable & Default & Description \\
 \hline
-{\tt Nave}       & 24           & Number of timesteps in averaged outputs \\
-{\tt Nsmp}       & 12           & Timestep of sample outputs, <= Nave     \\
-{\tt runid}      & none         & Run identifier string                   \\
-{\tt dump\_file} & {\tt 'dump'} & Dump file name                          \\
+{\tt Nave}       & 24           & Number of timesteps in averaged outputs       \\
+{\tt Nsmp}       & 12           & Timestep of sample outputs, $\leq$ {\tt Nave} \\
+{\tt runid}      & none         & Run identifier string                         \\
+{\tt dump\_file} & {\tt 'dump'} & Dump file name                                \\
 \hline 
 \end{tabular}
 
@@ -314,7 +333,7 @@ The sample file has 4 + 3$\times${\tt Nx$\times$Ny} columns:
 
 \begin{tabular}{|l|l|l|}
 \hline
-Variable          & Units       & Description           \\
+Variable & Units & Description \\
 \hline
 {\tt year}        & years       & Year                  \\
 {\tt month}       & months      & Month of the year     \\
@@ -330,7 +349,7 @@ The average file has 3 + 12$\times${\tt Nx$\times$Ny} columns:
 
 \begin{tabular}{|l|l|l|}
 \hline
-Variable           & Units        & Description                          \\
+Variable & Units & Description \\
 \hline
 {\tt year}         & years        & Year                                 \\
 {\tt month}        & months       & Month of the year                    \\
