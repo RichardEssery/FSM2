@@ -29,7 +29,8 @@ use DRIVING, only: &
   zaws                ! Weather station elevation for downscaling (m)
 
 use GRID, only: &
-  Nx,Ny               ! Grid dimensions
+  Nx,Ny,             &! Grid dimensions
+  ztop                ! Land surface elevations (m)
 
 use IOUNITS, only: &
   umet                ! Driving file unit number
