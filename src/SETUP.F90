@@ -54,7 +54,7 @@ namelist    /drive/ met_file,dt,lat,noon,Tlps,Tsnw,zaws,zT,zU
 namelist /gridpnts/ Nsmax,Nsoil,Nx,Ny,ztop_file
 namelist /gridlevs/ Dzsnow,Dzsoil
 namelist  /initial/ fsat,Tprof,start_file
-namelist     /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,VAI,z0sf,            &
+namelist     /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,trcn,VAI,ztop,z0sf,  &
                     alb0_file,canh_file,fcly_file,fsnd_file,fsky_file,fveg_file, &
                     hcan_file,scap_file,trcn_file,VAI_file,z0sf_file 
 namelist  /outputs/ Nave,Nsmp,ave_file,dmp_file,smp_file,runid

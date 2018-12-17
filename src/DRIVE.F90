@@ -34,6 +34,9 @@ use GRID, only: &
 use IOUNITS, only: &
   umet                ! Driving file unit number
 
+use PARAMMAPS, only: &
+  ztop                ! Land surface elevations (m)
+
 implicit none
 
 logical, intent(out) :: &

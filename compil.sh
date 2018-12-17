@@ -14,7 +14,7 @@ cat > OPTS.h << EOF
 #define CANMOD 1   /* forest canopy: 0 - zero layer, 1 - one layer                         */
 #define CONDCT 1   /* snow thermal conductivity: 0 - constant, 1 - Yen (1981)              */
 #define DENSTY 1   /* snow density: 0 - constant, 1 - Verseghy (1991), 2 - Anderson (1976) */
-#define EXCHNG 0   /* turbulent exchange: 0 - constant, 1 - Louis (1979)                   */
+#define EXCHNG 1   /* turbulent exchange: 0 - constant, 1 - Louis (1979)                   */
 #define HYDROL 1   /* snow hydraulics: 0 - free draining, 1 - bucket                       */
 
 /* Driving data options */

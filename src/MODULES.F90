@@ -82,8 +82,7 @@ integer :: &
   Nx,Ny               ! Grid dimensions
 real, allocatable :: &
   Dzsnow(:),         &! Minimum snow layer thicknesses (m)
-  Dzsoil(:),         &! Soil layer thicknesses (m)
-  ztop(:,:)           ! Land surface elevations (m)
+  Dzsoil(:)           ! Soil layer thicknesses (m)
 end module GRID
 
 !-----------------------------------------------------------------------
@@ -168,6 +167,7 @@ real, allocatable :: &
   scap(:,:),         &! Canopy snow capacity (kg/m^2)
   trcn(:,:),         &! Canopy transmissivity
   VAI(:,:),          &! Vegetation area index
+  ztop(:,:),         &! Land surface elevations (m)
   z0sf(:,:)           ! Snow-free roughness length (m)
 end module PARAMMAPS
 

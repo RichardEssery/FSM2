@@ -4,11 +4,13 @@
 subroutine READ_DEM(ztop_file)
 
 use GRID, only: &
-  Nx,Ny,             &! Grid dimensions
-  ztop                ! Land surface elevations (m)
+  Nx,Ny               ! Grid dimensions
 
 use IOUNITS, only: &
   umap                ! Map file unit number
+
+use PARAMMAPS, only: &
+  ztop                ! Land surface elevations (m)
 
 implicit none
 
