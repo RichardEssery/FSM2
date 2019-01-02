@@ -1,4 +1,54 @@
 !-----------------------------------------------------------------------
+! CMOR variable names for ESM-SnowMIP outputs
+!-----------------------------------------------------------------------
+module CMOR
+! Energy fluxes
+real :: &
+  hfds,              &! Downward heat flux at ground surface (W/m^2)
+  hfdsn,             &! Downward heat flux into snowpack (W/m^2)
+  hfls,              &! Surface upward latent heat flux (W/m^2)
+  hfmlt,             &! Energy of fusion (W/m^2)
+  hfrs,              &! Energy transferred to snowpack by rain (W/m^2)
+  hfsbl,             &! Energy of sublimation (W/m^2)
+  hfss,              &! Surface upward sensible heat flux (W/m^2)
+  rlus,              &! Surface upwelling longwave radiation (W/m^2)
+  rsus                ! Surface upwelling shortwave radiation (W/m^2)
+! Water fluxes
+real :: &
+  esn,               &! Liquid water evaporation from snowpack (kg/m^2/s)
+  evspsbl,           &! Total water vapour flux from surface (kg/m^2/s)
+  evspsblsoi,        &! Evaporation and sublimation from soil (kg/m^2/s)
+  evspsblveg,        &! Evaporation and sublimation from canopy (kg/m^2/s)
+  mrrob,             &! Subsurface runoff (kg/m^2/s)
+  mrros,             &! Surface runoff (kg/m^2/s)
+  sbl,               &! Sublimation of snow (kg/m^2/s)
+  snm,               &! Surface snow melt (kg/m^2/s)
+  snmsl,             &! Water flowing out of snowpack (kg/m^2/s)
+  tran                ! Transpiration (kg/m^2/s)
+! State variables
+real :: &
+  albedo,            &! Surface albedo
+  albsn,             &! Snow albedo
+  cw,                &! Total canopy water storage (kg/m^2)
+  lqsn,              &! Mass fraction of liquid water in snowpack
+  lwsnl,             &! Liquid water content of snowpack (kg/m^2)
+  snc,               &! Snow area fraction	
+  snd,               &! Snowdepth (m)
+  snw,               &! Mass of snowpack (kg/m^2)
+  snwc,              &! Mass of snow intercepted by vegetation (kg/m^2)
+  tcs,               &! Vegetation canopy temperature (K)
+  tgs,               &! Temperature of bare soil (K)
+  ts,                &! Surface temperature (K)
+  tsn,               &! Snow internal temperature (K)
+  tsns                ! Snow surface temperature (K)
+real, allocatable :: &
+  mrfsofr(:),        &! Mass fractions of frozen water in soil layers	
+  mrlqso(:),         &! Mass fractions of unfrozen water in soil layers
+  mrlsl(:),          &! Masses of moisture in soil layers (kg/m^2)
+  tsl(:)              ! Temperature of soil layers (K)
+end module CMOR
+
+!-----------------------------------------------------------------------
 ! Physical constants
 !-----------------------------------------------------------------------
 module CONSTANTS
@@ -7,20 +57,22 @@ real, parameter :: &
   eps = 0.622,       &! Ratio of molecular weights of water and dry air
   e0 = 611.213,      &! Saturation vapour pressure at Tm (Pa)
   grav = 9.81,       &! Acceleration due to gravity (m/s^2)
-  hcap_ice = 2100.,  &! Specific heat capacity of ice (J/K/kg)
-  hcap_wat = 4180.,  &! Specific heat capacity of water (J/K/kg)
+  hcap_ice = 2100,   &! Specific heat capacity of ice (J/K/kg)
+  hcap_wat = 4180,   &! Specific heat capacity of water (J/K/kg)
   hcon_air = 0.025,  &! Thermal conductivity of air (W/m/K)
   hcon_clay = 1.16,  &! Thermal conductivity of clay (W/m/K)
   hcon_ice = 2.24,   &! Thermal conducivity of ice (W/m/K)
   hcon_sand = 1.57,  &! Thermal conductivity of sand (W/m/K)
   hcon_wat = 0.56,   &! Thermal conductivity of water (W/m/K)
+  I0 = 1367,         &! Solar constant (W/m^2)
   Lf = 0.334e6,      &! Latent heat of fusion (J/kg)
   Lv = 2.501e6,      &! Latent heat of vapourisation (J/kg)
   Ls = Lf + Lv,      &! Latent heat of sublimation (J/kg)
+  pi = 3.14159,      &! pi
   Rair = 287,        &! Gas constant for air (J/K/kg)
   Rwat = 462,        &! Gas constant for water vapour (J/K/kg)
-  rho_ice = 917.,    &! Density of ice (kg/m^3)
-  rho_wat = 1000.,   &! Density of water (kg/m^3)
+  rho_ice = 917,     &! Density of ice (kg/m^3)
+  rho_wat = 1000,    &! Density of water (kg/m^3)
   sb = 5.67e-8,      &! Stefan-Boltzmann constant (W/m^2/K^4)
   Tm = 273.15,       &! Melting point (K)
   vkman = 0.4         ! Von Karman constant
@@ -54,13 +106,17 @@ real :: &
 real :: &
   dt,                &! Timestep (s)
   lat,               &! Latitude (radians)
-  noon,              &! Local offset from solar noon (hours)
+  noon,              &! Time of solar noon (hour)
   Pscl,              &! Precipitation adjustment scale (1/km)
   Tlps,              &! Temperature lapse rate (K/km)
   Tsnw,              &! Snow threshold temperature (K)
   zaws,              &! Weather station elevation for downscaling (m)
   zT,                &! Temperature measurement height (m)
   zU                  ! Wind speed measurement height (m)
+real :: &
+  Sdif,              &! Diffuse shortwave radiation (W/m^2)
+  Sdir,              &! Direct-beam shortwave radiation (W/m^2)
+  Udir                ! Wind direction (degrees, clockwise from N)
 real, allocatable :: &
   LW(:,:),           &! Incoming longwave radiation (W/m^2)
   Ps(:,:),           &! Surface pressure (Pa)
@@ -96,6 +152,9 @@ integer, parameter :: &
   umet = 41,         &! Driving file unit number
   umta = 51,         &! Metadata file unit number
   usmp = 61,         &! Sample output file unit number
+  ueng = 62,         &! ESM-SnowMIP energy flux table unit number
+  usta = 63,         &! ESM-SnowMIP state variable table unit number
+  uwat = 64,         &! ESM-SnowMIP water flux table unit number
   ustr = 71           ! Start file unit number
 end module IOUNITS
 
@@ -112,8 +171,10 @@ real :: &
   avgs,              &! Snow-covered vegetation albedo
   cden,              &! Dense canopy turbulent transfer coefficient
   cvai,              &! Canopy snow capacity per unit VAI (kg/m^2)
+  Gcn1,              &! Leaf angle distribution parameter
+  Gcn2,              &! Leaf angle distribution parameter
   gsnf,              &! Snow-free vegetation moisture conductance (m/s)
-  kext,              &! Canopy radiation extinction coefficient
+  kdif,              &! Diffuse radiation extinction coefficient
   kveg,              &! Canopy cover coefficient
   cveg,              &! Vegetation turbulent transfer coefficient
   rchd,              &! Ratio of displacement height to canopy height
@@ -127,19 +188,16 @@ real :: &
   bstb,              &! Atmospheric stability parameter
   bthr,              &! Snow thermal conductivity exponent
   eta0,              &! Reference snow viscosity (Pa s)
-  etaa,              &! Snow viscosity parameter (1/K)
-  etab,              &! Snow viscosity parameter (m^3/kg)
   hfsn,              &! Snowcover fraction depth scale (m)
   kfix,              &! Fixed thermal conductivity of snow (W/m/K)
   rho0,              &! Fixed snow density (kg/m^3)
-  rhoc,              &! Critical snow density (kg/m^3)
+  rhob,              &! Temperature factor in fresh snow density (kg/m^3/K)
+  rhoc,              &! Wind factor in fresh snow density (kg s^0.5/m^3.5)
   rhof,              &! Fresh snow density (kg/m^3)
   rcld,              &! Maximum density for cold snow (kg/m^3)
   rmlt,              &! Maximum density for melting snow (kg/m^3)
   Salb,              &! Snowfall to refresh albedo (kg/m^2)
-  snda,              &! Snow densification parameter (1/s)
-  sndb,              &! Snow densification parameter (1/K)
-  sndc,              &! Snow densification parameter (m^3/kg)
+  snda,              &! Thermal metamorphism parameter (1/s)
   Talb,              &! Albedo decay temperature threshold (C)
   tcld,              &! Cold snow albedo decay time scale (s)
   tmlt,              &! Melting snow albedo decay time scale (s)
@@ -148,8 +206,7 @@ real :: &
   z0sn                ! Snow roughness length (m)
 ! Surface parameters
 real :: &
-  gsat,              &! Surface conductance for saturated soil (m/s)
-  z0zh                ! Ratio of roughness lengths for momentum and heat
+  gsat                ! Surface conductance for saturated soil (m/s)
 end module PARAMETERS
 
 !-----------------------------------------------------------------------

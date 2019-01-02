@@ -5,6 +5,11 @@ subroutine THERMAL(csoil,Ds1,gs1,ks1,ksnow,ksoil,Ts1,Tveg0)
 
 #include "OPTS.h"
 
+use CMOR, only : &
+  mrfsofr,           &! Mass fractions of frozen water in soil layers	
+  mrlqso,            &! Mass fractions of unfrozen water in soil layers
+  mrlsl               ! Masses of moisture in soil layers (kg/m^2)
+
 use CONSTANTS, only: &
   grav,              &! Acceleration due to gravity (m/s^2)
   hcap_ice,          &! Specific heat capacity of ice (J/K/kg)
@@ -68,8 +73,8 @@ real :: &
   dPsidT,            &! Rate of change of ice potential with temperature (m/K)
   dthudT,            &! Rate of change of unfrozen soil moisture with temperature (1/K)
   hcon_sat,          &! Thermal conductivity of saturated soil (W/m/K)
-  Mf,                &! Frozen moisture content of soil layers (kg/m^2)
-  Mu,                &! Unfrozen moisture content of soil layers (kg/m^2) 
+  Mf,                &! Frozen moisture content of soil layer (kg/m^2)
+  Mu,                &! Unfrozen moisture content of soil layer (kg/m^2)
   rhos,              &! Snow density (kg/m^3)
   Smf,               &! Fractional frozen soil moisture content
   Smu,               &! Fractional unfrozen soil moisture conctent
@@ -132,6 +137,15 @@ do i = 1, Nx
       hcon_sat = hcon_soil(i,j)*(hcon_wat**thwat)*(hcon_ice**thice)/(hcon_air**Vsat(i,j))
       ksoil(k,i,j) = (hcon_sat - hcon_soil(i,j))*(Smf + Smu) + hcon_soil(i,j)
       if (k == 1) gs1(i,j) = gsat*max((Smu*Vsat(i,j)/Vcrit(i,j))**2, 1.)
+#if TXTOUT ==1
+      mrlsl(k) = Mf + Mu
+      mrfsofr(k) = 0
+      mrlqso(k) = 0
+      if (mrlsl(k) > epsilon(mrlsl)) then
+        mrfsofr(k) = Mf / mrlsl(k) 
+        mrlqso(k) = Mu / mrlsl(k)
+      end if
+#endif
     end if
   end do
 end do

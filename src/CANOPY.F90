@@ -3,6 +3,14 @@
 !-----------------------------------------------------------------------
 subroutine CANOPY(Eveg,unload)
 
+#include "OPTS.h"
+
+use CMOR, only : &
+  cw,                &! Total canopy water storage (kg/m2)
+  evspsblveg,        &! Evaporation and sublimation from canopy (kg/m2/s)
+  snwc,              &! Mass of snow intercepted by vegetation (kg/m2)
+  tran                ! Transpiration (kg/m2/s)
+
 use CONSTANTS, only: &
   Tm                  ! Melting point (K)
 
@@ -67,6 +75,14 @@ do i = 1, Nx
   end if
 end do
 end do
+
+#if TXTOUT == 1
+cw = Sveg(1,1)
+evspsblveg = Eveg(1,1)
+snwc = Sveg(1,1)
+tran = 0
+if (Sveg(1,1) == 0) tran = Eveg(1,1)
+#endif
 
 end subroutine CANOPY
 

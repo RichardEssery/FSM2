@@ -3,6 +3,15 @@
 !-----------------------------------------------------------------------
 subroutine SOIL(csoil,Gsoil,ksoil)
 
+#include "OPTS.h"
+
+use CMOR, only : &
+  evspsblsoi,        &! Evaporation and sublimation from soil (kg/m^2/s)
+  hfds,              &! Downward heat flux at ground surface (W/m^2)
+  mrrob,             &! Subsurface runoff (kg/m^2/s)
+  tgs,               &! Temperature of bare soil (K)
+  tsl                 ! Temperature of soil layers (K)
+
 use DRIVING, only: &
   dt                  ! Timestep (s)
 
@@ -61,5 +70,13 @@ do i = 1, Nx
   end do
 end do
 end do
+
+#if TXTOUT == 1
+evspsblsoi = 0
+hfds = Gsoil(1,1)
+mrrob = 0
+tgs = Tsoil(1,1,1)
+tsl(:) = Tsoil(:,1,1)
+#endif
 
 end subroutine SOIL

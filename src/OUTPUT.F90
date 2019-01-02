@@ -3,6 +3,10 @@
 !-----------------------------------------------------------------------
 subroutine OUTPUT(type)
 
+#include "OPTS.h"
+
+use CMOR
+
 use DRIVING, only: &
   year,              &! Year
   month,             &! Month of year
@@ -11,7 +15,10 @@ use DRIVING, only: &
 
 use IOUNITS, only: &
   uave,              &! Average output file unit number
-  usmp                ! Sample output file unit number
+  usmp,              &! Sample output file unit number
+  ueng,              &! ESM-SnowMIP energy flux table unit number
+  usta,              &! ESM-SnowMIP state variable table unit number
+  uwat                ! ESM-SnowMIP water flux table unit number
 
 use DIAGNOSTICS, only: &
   diags,             &! Cumulated diagnostics
@@ -43,6 +50,7 @@ real :: &
   snowdepth(Nx,Ny),  &! Snow depth (m)
   SWE(Nx,Ny)          ! Snow water equivalent (kg/m^2) 
 
+#if TXTOUT == 0
 ! Output samples
 if (type == 'smp') then
   do j = 1, Ny
@@ -87,5 +95,17 @@ if (type == 'ave') then
 end if
 
 100 format(3(i4),*(f12.3))
+#endif
+
+#if TXTOUT == 1
+if (type == 'smp') then
+  write(ueng,200) year,month,day,hour,hfds,hfdsn,hfls,hfmlt,hfrs,hfsbl,hfss,rlus,rsus
+  write(uwat,200) year,month,day,hour,esn,evspsbl,evspsblsoi,evspsblveg,mrrob,mrros,   &
+                  sbl,snm,snmsl,tran
+  write(usta,200) year,month,day,hour,albedo,albsn,cw,lqsn,lwsnl,mrfsofr(:),mrlqso(:), &
+                  mrlsl(:),snc,snd,snw,snwc,tcs,tgs,ts,tsl(:),tsn,tsns
+end if
+200 format(3(i4),*(e14.5))
+#endif
 
 end subroutine OUTPUT

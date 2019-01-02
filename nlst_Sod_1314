@@ -7,6 +7,8 @@
   met_file = 'met_Sod_1314.txt'
   zT = 18
   zU = 18
+  lat = 67.37
+  noon = 10
 /
 &params
 /

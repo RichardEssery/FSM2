@@ -8,23 +8,29 @@
 
 cd src
 (
-echo /* Process options */
-echo #define ALBEDO 1   /* snow albedo: 0 - diagnostic, 1 - prognostic             */
-echo #define CANMOD 1   /* forest canopy: 0 - zero layer, 1 - one layer            */
-echo #define CONDCT 1   /* snow thermal conductivity: 0 - constant, 1 - Yen 1981   */
-echo #define DENSTY 1   /* snow density: 0 - constant, 1 - Verseghy 1991           */
-echo #define EXCHNG 1   /* turbulent exchange: 0 - constant, 1 - Louis 1979        */
-echo #define HYDROL 1   /* snow hydraulics: 0 - free draining, 1 - bucket          */
-echo /* Driving data options */
-echo #define DRIV1D 0   /* 1D driving data format: 0 - FSM, 1 - ESM-SnowMIP           */
-echo #define SWPART 0   /* SW radiation: 0 - total, 1 - direct and diffuse calculated */
+echo /* Process options                                : Possible values */
+echo #define ALBEDO 1   /* snow albedo                 : 0, 1            */
+echo #define CANMOD 1   /* forest canopy               : 0, 1            */
+echo #define CONDCT 1   /* snow thermal conductivity   : 0, 1            */
+echo #define DENSTY 1   /* snow density                : 0, 1, 2         */
+echo #define EXCHNG 1   /* turbulent exchange          : 0, 1            */
+echo #define HYDROL 1   /* snow hydraulics             : 0, 1            */
+echo #define SNFRAC 1   /* snow cover fraction         : 0, 1            */
+echo /* Driving data options                           : Possible values */
+echo #define DRIV1D 0   /* 1D driving data format      : 0, 1, 2         */
+echo #define DOWNSC 0   /* 1D driving data downscaling : 0, 1            */
+echo #define DEMHDR 0   /* DEM header                  : 0, 1            */
+echo #define SWPART 0   /* SW radiation partition      : 0, 1, 2         */
+echo #define ZOFFST 0   /* Measurement height offset   : 0, 1            */
+echo /* Output options                                 : Possible values */
+echo #define TXTOUT 0   /* Text output format          : 0, 1            */
 ) > OPTS.h
 
 set mods= MODULES.f90
 set routines= CANOPY.F90 CUMULATE.F90 DRIVE.F90 DUMP.F90 EBALFOR.F90 ^
 EBALSRF.F90 FSM2.F90 LUDCMP.F90 OUTPUT.F90 PHYSICS.F90 QSAT.F90 ^
-READMAPS.F90 SETUP.F90 SNOW.F90 SOIL.F90 SFEXCH.F90 SWRAD.F90 ^
-THERMAL.F90 TRIDIAG.F90
+RADIATION.F90 READMAPS.F90 READ_DEM.F90 SETUP.F90 SNOW.F90 SOIL.F90 ^
+SFEXCH.F90 SOLARPOS.F90 THERMAL.F90 TRIDIAG.F90
 gfortran %mods% %routines% -cpp -o FSM2
 del *.mod
 move FSM2.exe ../FSM2.exe

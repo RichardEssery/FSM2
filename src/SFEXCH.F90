@@ -27,8 +27,7 @@ use PARAMETERS, only : &
   gsnf,              &! Snow-free vegetation moisture conductance (m/s)
   rchd,              &! Ratio of displacement height to canopy height
   rchz,              &! Ratio of roughness length to canopy height
-  z0sn,              &! Snow roughness length (m)
-  z0zh                ! Ratio of roughness lengths for momentum and heat
+  z0sn                ! Snow roughness length (m)
 
 use PARAMMAPS, only: &
   hcan,              &! Canopy height (m)
@@ -95,7 +94,7 @@ do i = 1, Nx
   z0g = (z0sn**fsnow(i,j)) * (z0sf(i,j)**(1 - fsnow(i,j)))
   z0v = rchz*hcan(i,j)
   z0  = (z0v**fveg(i,j)) * (z0g**(1 - fveg(i,j)))
-  z0h = z0 / z0zh
+  z0h = 0.1*z0
   dh = fveg(i,j)*rchd*hcan(i,j)
   CD = (vkman / log((zU1 - dh)/z0))**2
   ustar = sqrt(CD)*Ua(i,j)

@@ -4,6 +4,8 @@
 subroutine SETUP
 
 #include "OPTS.h"
+
+use CMOR
 use CONSTANTS
 use DIAGNOSTICS
 use DRIVING
@@ -54,13 +56,13 @@ namelist    /drive/ met_file,dt,lat,noon,Tlps,Tsnw,zaws,zT,zU
 namelist /gridpnts/ Nsmax,Nsoil,Nx,Ny,ztop_file
 namelist /gridlevs/ Dzsnow,Dzsoil
 namelist  /initial/ fsat,Tprof,start_file
-namelist     /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,trcn,VAI,ztop,z0sf,  &
+namelist     /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,trcn,VAI,z0sf,  &
                     alb0_file,canh_file,fcly_file,fsnd_file,fsky_file,fveg_file, &
                     hcan_file,scap_file,trcn_file,VAI_file,z0sf_file 
 namelist  /outputs/ Nave,Nsmp,ave_file,dmp_file,smp_file,runid
-namelist   /params/ asmx,asmn,avg0,avgs,bstb,bthr,cden,cvai,cveg,eta0,etaa,etab,gsat,gsnf,  &
-                    hfsn,kext,kfix,kveg,Nitr,rchd,rchz,rho0,rhoc,rhof,rcld,rmlt,Salb,snda,  &
-                    sndb,sndc,Talb,tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn,z0zh
+namelist   /params/ asmx,asmn,avg0,avgs,bstb,bthr,cden,cvai,cveg,eta0,Gcn1,Gcn2,gsat,gsnf,  &
+                    hfsn,kdif,kfix,kveg,Nitr,rchd,rchz,rho0,rhob,rhoc,rhof,rcld,rmlt,Salb,  &
+                    snda,Talb,tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn
 
 ! Grid parameters
 Nx = 1
@@ -88,7 +90,7 @@ call READ_DEM(ztop_file)
 met_file = 'met'
 dt = 3600
 lat = 0
-noon = 0
+noon = 12
 zT = 2
 zU = 10
 Pscl = 0.35
@@ -106,10 +108,10 @@ allocate(SW(Nx,Ny))
 allocate(Ta(Nx,Ny))
 allocate(Ua(Nx,Ny))
 ! Convert units
-lat = (3.14159/180)*lat  ! degress to radians
-Pscl = 1e-3*Pscl         ! 1/km to 1/m
-Tlps = 1e-3*Tlps         ! K/km to K/m
-Tsnw = Tsnw + Tm         ! C to K
+lat = (pi/180)*lat  ! degress to radians
+Pscl = 1e-3*Pscl    ! 1/km to 1/m
+Tlps = 1e-3*Tlps    ! K/km to K/m
+Tsnw = Tsnw + Tm    ! C to K
 
 ! Defaults for numerical solution parameters
 Nitr = 4
@@ -120,8 +122,10 @@ avgs = 0.4
 cden = 0.004
 cvai = 4.4
 cveg = 20
+Gcn1 = 0.5
+Gcn2 = 0
 gsnf = 0
-kext = 0.5
+kdif = 0.5
 kveg = 1
 rchd = 0.67
 rchz = 0.1
@@ -134,19 +138,16 @@ asmn = 0.5
 bstb = 5
 bthr = 2
 eta0 = 3.7e7
-etaa = 0.081
-etab = 0.018
 hfsn = 0.1
 kfix = 0.24
 rho0 = 300
-rhoc = 150
+rhob = 0
+rhoc = 0
 rhof = 100
 rcld = 300
 rmlt = 500
 Salb = 10
 snda = 2.8e-6
-sndb = 0.042
-sndc = 0.046
 Talb = -2
 tcld = 1000
 tmlt = 100
@@ -157,7 +158,6 @@ z0sn = 0.01
 ! Defaults for ground surface parameters
 bstb = 5
 gsat = 0.01
-z0zh = 10
 
 ! Read parameter namelist and overwrite defaults
 read(5,params)
@@ -212,7 +212,7 @@ call READMAPS(trcn_file,trcn)
 call READMAPS(VAI_file,VAI)
 call READMAPS(z0sf_file,z0sf)
 if (canh(1,1) < 0) canh(:,:) = 2500*VAI(:,:)
-if (trcn(1,1) < 0) trcn(:,:) = exp(-kext*VAI(:,:))
+if (trcn(1,1) < 0) trcn(:,:) = exp(-kdif*VAI(:,:))
 if (fveg(1,1) < 0) fveg(:,:) = 1 - exp(-kveg*VAI(:,:))
 if (scap(1,1) < 0) scap(:,:) = cvai*VAI(:,:)
 
@@ -318,42 +318,92 @@ smp_file = 'smp'
 runid = 'none'
 read(5, outputs)
 if (runid == 'none') runid = ''
-open(uave, file = trim(runid) // trim(ave_file))
 open(udmp, file = trim(runid) // trim(dmp_file))
+#if TXTOUT == 0
+open(uave, file = trim(runid) // trim(ave_file))
 open(usmp, file = trim(runid) // trim(smp_file))
+#endif
+#if TXTOUT == 1
+open(ueng, file = trim(runid) // 'ebal.txt')
+open(usta, file = trim(runid) // 'svar.txt')
+open(uwat, file = trim(runid) // 'wbal.txt')
+allocate(mrfsofr(Nsoil))
+allocate(mrlqso(Nsoil))
+allocate(mrlsl(Nsoil))
+allocate(tsl(Nsoil))
+#endif
 
 ! Write options and namelists to metadata file
+#if DRIV1D == 0
+#define DRIV1D_OPT '1D driving data in FSM format'
+#elif DRIV1D == 1
+#define DRIV1D_OPT '1D driving data with SW radiation components'
+#elif DRIV1D == 2
+#define DRIV1D_OPT '1D driving data in ESM-SnowMIP format'
+#endif
+#if DOWNSC == 0
+#define DOWNSC_OPT 'driving data is not downscaled'
+#elif DOWNSC == 1
+#define DOWNSC_OPT 'driving data is downscaled to a DEM'
+#endif
+#if DEMHDR == 0
+#define DEMHDR_OPT 'DEM file has no header'
+#elif DEMHDR == 1
+#define DEMHDR_OPT 'DEM file has a text header'
+#endif
+#if SWPART == 0
+#define SWPART_OPT 'SW radiation assumed to be diffuse'
+#elif SWPART == 1
+#define SWPART_OPT 'diffuse and direct-beam SW radiation calculated'
+#elif SWPART == 2
+#define SWPART_OPT 'diffuse and direct-beam SW radiation taken from driving data'
+#endif
+#if ZOFFST == 0
+#define ZOFFST_OPT 'measurement heights specified above ground'
+#elif ZOFFST == 1
+#define ZOFFST_OPT 'measurement heights specified above canopy top'
+#endif
 #if ALBEDO == 0
-#define ALBEDO_OPT 'diagnostic'
+#define ALBEDO_OPT 'snow albedo a function of temperature'
 #elif ALBEDO == 1
-#define ALBEDO_OPT 'prognostic'
+#define ALBEDO_OPT 'snow albedo a function of age'
 #endif
 #if CANMOD == 0
-#define CANMOD_OPT 'zero layer'
+#define CANMOD_OPT 'zero layer canopy model'
 #elif CANMOD == 1
-#define CANMOD_OPT 'one layer'
+#define CANMOD_OPT 'one layer canopy model'
 #endif
 #if CONDCT == 0
-#define CONDCT_OPT 'constant'
+#define CONDCT_OPT 'constant snow thermal conductivity'
 #elif CONDCT == 1
-#define CONDCT_OPT 'Yen (1981)'
+#define CONDCT_OPT 'snow thermal conductivity a function of density'
 #endif
 #if DENSTY == 0
-#define DENSTY_OPT 'constant'
+#define DENSTY_OPT 'constant snow density'
 #elif DENSTY == 1
-#define DENSTY_OPT 'Verseghy (1991)'
+#define DENSTY_OPT 'snow density a function of age'
 #elif DENSTY == 2
-#define DENSTY_OPT 'Anderson (1976)'
+#define DENSTY_OPT 'snow density a function of overburden'
 #endif
 #if EXCHNG == 0
-#define EXCHNG_OPT 'constant'
+#define EXCHNG_OPT 'constant surface exchange coefficient'
 #elif EXCHNG == 1
-#define EXCHNG_OPT 'Louis (1979)'
+#define EXCHNG_OPT 'surface exchange coefficient a function of Richardson number'
 #endif
 #if HYDROL == 0
-#define HYDROL_OPT 'free draining'
+#define HYDROL_OPT 'freely draining snow'
 #elif HYDROL == 1
-#define HYDROL_OPT 'bucket'
+#define HYDROL_OPT 'irreducible water content retained in snow'
+#endif
+#if SNFRAC == 0
+#define SNFRAC_OPT 'snow cover fraction h/(h+hf)'
+#elif SNFRAC == 1
+#define SNFRAC_OPT 'snow cover fraction tanh(h/hf)'
+#endif
+#if TXTOUT == 0
+#define TXTOUT_OPT 'sample and average output files'
+#elif TXTOUT == 1
+#define TXTOUT_OPT 'ESM-SnowMIP output tables'
 #endif
 open(umta, file =  trim(runid) // 'runinfo')
 write(umta,*) '##################################'
@@ -366,15 +416,26 @@ call date_and_time(VALUES=time)
 write(umta,100) time(5),time(6),time(3),time(2),time(1)
 100 format (' Run at ',i2,':',i2,1x,i2,'/',i2,'/',i4)
 write(umta,*) 
-write(umta,*) 'PHYSICS OPTIONS'
-write(umta,*) 'snow albedo        ', ALBEDO_OPT
-write(umta,*) 'canopy model       ', CANMOD_OPT
-write(umta,*) 'snow conductivity  ', CONDCT_OPT
-write(umta,*) 'snow density       ', DENSTY_OPT
-write(umta,*) 'turbulent exchange ', EXCHNG_OPT
-write(umta,*) 'snow hydraulics    ', HYDROL_OPT
+write(umta,'(a)') 'COMPILATION OPTIONS'
+write(umta,'(a)') '&OPTS'
+write(umta,*) 'DRIV1D=',DRIV1D,'! ',DRIV1D_OPT
+write(umta,*) 'DOWNSC=',DOWNSC,'! ',DOWNSC_OPT
+#if DOWNSC == 1
+write(umta,*) 'DEMHDR=',DEMHDR,'! ',DEMHDR_OPT
+#endif
+write(umta,*) 'SWPART=',SWPART,'! ',SWPART_OPT
+write(umta,*) 'ZOFFST=',ZOFFST,'! ',ZOFFST_OPT
+write(umta,*) 'ALBEDO=',ALBEDO,'! ',ALBEDO_OPT
+write(umta,*) 'CANMOD=',CANMOD,'! ',CANMOD_OPT
+write(umta,*) 'CONDCT=',CONDCT,'! ',CONDCT_OPT
+write(umta,*) 'DENSTY=',DENSTY,'! ',DENSTY_OPT
+write(umta,*) 'EXCHNG=',EXCHNG,'! ',EXCHNG_OPT
+write(umta,*) 'CANMOD=',HYDROL,'! ',HYDROL_OPT
+write(umta,*) 'SNFRAC=',SNFRAC,'! ',SNFRAC_OPT
+write(umta,*) 'TXTOUT=',TXTOUT,'! ',TXTOUT_OPT
+write(umta,*) '/'
 write(umta,*)
-write(umta,*) 'NAMELISTS'
+write(umta,'(a)') 'NAMELISTS'
 write(umta,drive)
 write(umta,gridpnts)
 write(umta,gridlevs)

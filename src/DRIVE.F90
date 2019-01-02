@@ -19,10 +19,13 @@ use DRIVING, only: &
   Ps,                &! Surface pressure (Pa)
   Qa,                &! Specific humidity (kg/kg)
   Rf,                &! Rainfall rate (kg/m2/s)
+  Sdif,              &! Diffuse shortwave radiation (W/m^2)
+  Sdir,              &! Direct-beam shortwave radiation (W/m^2)
   Sf,                &! Snowfall rate (kg/m2/s)
   SW,                &! Incoming shortwave radiation (W/m2)
   Ta,                &! Air temperature (K)
   Ua,                &! Wind speed (m/s)
+  Udir,              &! Wind direction (degrees, clockwise from N)
   Pscl,              &! Precipitation adjustment scale (1/km)
   Tlps,              &! Temperature lapse rate (K/km)
   Tsnw,              &! Snow threshold temperature (K)
@@ -64,17 +67,23 @@ real :: &
 #if DRIV1D == 0
 ! FSM driving data
 read(umet,*,end=1) year,month,day,hour,SWp,LWp,Sfp,Rfp,Tap,RHp,Uap,Psp
-Tc = Tap - Tm
-es = e0*exp(17.5043*Tc/(241.3 + Tc))
-Qap = (RHp/100)*eps*es/Psp
 #endif
-
 #if DRIV1D == 1
+! Extended driving data
+read(umet,*,end=1) year,month,day,hour,Sdif,Sdir,LWp,Sfp,Rfp,Tap,RHp,Uap,Psp
+#endif
+#if DRIV1D == 2
 ! ESM-SnowMIP driving data
 read(umet,*,end=1) year,month,day,hour,SWp,LWp,Rfp,Sfp,Tap,Qap,RHp,Uap,Psp
 #endif
 
 Uap = max(Uap, 0.1)
+#if DRIV1D != 2
+! Convert relative to specific humidity
+Tc = Tap - Tm
+es = e0*exp(17.5043*Tc/(241.3 + Tc))
+Qap = (RHp/100)*eps*es/Psp
+#endif
 
 LW(:,:) = LWp
 PS(:,:) = Psp

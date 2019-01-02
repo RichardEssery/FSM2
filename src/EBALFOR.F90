@@ -6,6 +6,11 @@ subroutine EBALFOR(Ds1,KHa,KHg,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1,Tveg0,  &
 
 #include "OPTS.h"
 
+use CMOR, only : &
+  rlus,              &! Surface upwelling longwave radiation (W/m^2)
+  tcs,               &! Vegetation canopy temperature (K)
+  ts                  ! Surface temperature (K)
+
 use CONSTANTS, only : &
   cp,                &! Specific heat capacity of air (J/K/kg)
   Lf,                &! Latent heat of fusion (J/kg)
@@ -96,7 +101,6 @@ real :: &
   Rveg,              &! Net radiation absorbed by vegetation (W/m^2)model
   Ssub                ! Mass of snow available for sublimation (kg/m^2)
 
-#if CANMOD == 1
 ! 1-layer canopy model
 do j = 1, Ny
 do i = 1, Nx
@@ -225,10 +229,15 @@ do i = 1, Nx
       Hsrf(i,j) = Rnet(i,j) - G(i,j) - LEsrf(i,j) - Lf*Melt(i,j)
     end if
 
+#if TXTOUT == 1
+   rlus = trcn(i,j)*sb*Tsrf(i,j)**4 + (1 - trcn(i,j))*sb*Tveg(i,j)**4
+   tcs = Tveg(1,1)
+   ts = (rlus/sb)**0.25
+#endif
+
   end if
 end do
 end do
-#endif
 
 end subroutine EBALFOR
 
