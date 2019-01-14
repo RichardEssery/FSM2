@@ -1,52 +1,3 @@
-!-----------------------------------------------------------------------
-! CMOR variable names for ESM-SnowMIP outputs
-!-----------------------------------------------------------------------
-module CMOR
-! Energy fluxes
-real :: &
-  hfds,              &! Downward heat flux at ground surface (W/m^2)
-  hfdsn,             &! Downward heat flux into snowpack (W/m^2)
-  hfls,              &! Surface upward latent heat flux (W/m^2)
-  hfmlt,             &! Energy of fusion (W/m^2)
-  hfrs,              &! Energy transferred to snowpack by rain (W/m^2)
-  hfsbl,             &! Energy of sublimation (W/m^2)
-  hfss,              &! Surface upward sensible heat flux (W/m^2)
-  rlus,              &! Surface upwelling longwave radiation (W/m^2)
-  rsus                ! Surface upwelling shortwave radiation (W/m^2)
-! Water fluxes
-real :: &
-  esn,               &! Liquid water evaporation from snowpack (kg/m^2/s)
-  evspsbl,           &! Total water vapour flux from surface (kg/m^2/s)
-  evspsblsoi,        &! Evaporation and sublimation from soil (kg/m^2/s)
-  evspsblveg,        &! Evaporation and sublimation from canopy (kg/m^2/s)
-  mrrob,             &! Subsurface runoff (kg/m^2/s)
-  mrros,             &! Surface runoff (kg/m^2/s)
-  sbl,               &! Sublimation of snow (kg/m^2/s)
-  snm,               &! Surface snow melt (kg/m^2/s)
-  snmsl,             &! Water flowing out of snowpack (kg/m^2/s)
-  tran                ! Transpiration (kg/m^2/s)
-! State variables
-real :: &
-  albedo,            &! Surface albedo
-  albsn,             &! Snow albedo
-  cw,                &! Total canopy water storage (kg/m^2)
-  lqsn,              &! Mass fraction of liquid water in snowpack
-  lwsnl,             &! Liquid water content of snowpack (kg/m^2)
-  snc,               &! Snow area fraction	
-  snd,               &! Snowdepth (m)
-  snw,               &! Mass of snowpack (kg/m^2)
-  snwc,              &! Mass of snow intercepted by vegetation (kg/m^2)
-  tcs,               &! Vegetation canopy temperature (K)
-  tgs,               &! Temperature of bare soil (K)
-  ts,                &! Surface temperature (K)
-  tsn,               &! Snow internal temperature (K)
-  tsns                ! Snow surface temperature (K)
-real, allocatable :: &
-  mrfsofr(:),        &! Mass fractions of frozen water in soil layers	
-  mrlqso(:),         &! Mass fractions of unfrozen water in soil layers
-  mrlsl(:),          &! Masses of moisture in soil layers (kg/m^2)
-  tsl(:)              ! Temperature of soil layers (K)
-end module CMOR
 
 !-----------------------------------------------------------------------
 ! Physical constants
@@ -86,7 +37,7 @@ integer :: &
   Nave,              &! Number of timesteps in average outputs
   Nsmp                ! Timestep for sample outputs
 integer, parameter :: &
-  Ndiags = 11         ! Number of averaged diagnostics
+  Ndiags = 10         ! Number of averaged diagnostics
 real, allocatable :: &
   diags(:,:,:),      &! Averaged diagnostics
   SWin(:,:),         &! Cumulated incoming solar radiation (J/m^2)
@@ -146,16 +97,14 @@ end module GRID
 !-----------------------------------------------------------------------
 module IOUNITS
 integer, parameter :: &
-  uave = 11,         &! Average output file unit number
-  udmp = 21,         &! Dump file unit number
-  umap = 31,         &! Map file unit number
-  umet = 41,         &! Driving file unit number
-  umta = 51,         &! Metadata file unit number
-  usmp = 61,         &! Sample output file unit number
-  ueng = 62,         &! ESM-SnowMIP energy flux table unit number
-  usta = 63,         &! ESM-SnowMIP state variable table unit number
-  uwat = 64,         &! ESM-SnowMIP water flux table unit number
-  ustr = 71           ! Start file unit number
+  umap = 11,         &! Map input file unit number
+  umet = 21,         &! Driving input file unit number
+  ustr = 31,         &! Start file unit number
+  uave = 41,         &! Average output file unit number
+  udmp = 51,         &! Dump output file unit number
+  umta = 61,         &! Metadata output file unit number
+  uprf = 71,         &! Profile output file number
+  usmp = 81           ! Sample output file unit number
 end module IOUNITS
 
 !-----------------------------------------------------------------------
@@ -190,6 +139,7 @@ real :: &
   eta0,              &! Reference snow viscosity (Pa s)
   hfsn,              &! Snowcover fraction depth scale (m)
   kfix,              &! Fixed thermal conductivity of snow (W/m/K)
+  rgr0,              &! Fresh snow grain radius (m)
   rho0,              &! Fixed snow density (kg/m^3)
   rhob,              &! Temperature factor in fresh snow density (kg/m^3/K)
   rhoc,              &! Wind factor in fresh snow density (kg s^0.5/m^3.5)
@@ -260,6 +210,7 @@ integer, allocatable :: &
 real, allocatable :: &
   albs(:,:),         &! Snow albedo
   Ds(:,:,:),         &! Snow layer thicknesses (m)
+  rgrn(:,:,:),       &! Snow layer grain radius (m)
   Sice(:,:,:),       &! Ice content of snow layers (kg/m^2)
   Sliq(:,:,:),       &! Liquid content of snow layers (kg/m^2)
   Tsnow(:,:,:)        ! Snow layer temperatures (K)

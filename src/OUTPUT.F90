@@ -5,8 +5,6 @@ subroutine OUTPUT(type)
 
 #include "OPTS.h"
 
-use CMOR
-
 use DRIVING, only: &
   year,              &! Year
   month,             &! Month of year
@@ -15,10 +13,8 @@ use DRIVING, only: &
 
 use IOUNITS, only: &
   uave,              &! Average output file unit number
-  usmp,              &! Sample output file unit number
-  ueng,              &! ESM-SnowMIP energy flux table unit number
-  usta,              &! ESM-SnowMIP state variable table unit number
-  uwat                ! ESM-SnowMIP water flux table unit number
+  uprf,              &! Profile output file unit number
+  usmp                ! Sample output file unit number
 
 use DIAGNOSTICS, only: &
   diags,             &! Cumulated diagnostics
@@ -28,13 +24,22 @@ use DIAGNOSTICS, only: &
   SWout               ! Cumulated reflected solar radiation (J/m^2)
 
 use GRID, only: &
+  Dzsoil,            &! Soil layer thicknesses (m)
+  Nsoil,             &! Number of soil layers
   Nx,Ny               ! Grid dimensions
 
 use STATE_VARIABLES, only: &
   Ds,                &! Snow layer thicknesses (m)
+  Nsnow,             &! Number of snow layers
+  rgrn,              &! Snow layer grain radius (m)
   Sice,              &! Ice content of snow layers (kg/m^2)
   Sliq,              &! Liquid content of snow layers (kg/m^2)
-  Sveg                ! Snow mass on vegetation (kg/m^2)
+  Sveg,              &! Snow mass on vegetation (kg/m^2)
+  theta,             &! Volumetric moisture content of soil layers
+  Tsnow,             &! Snow layer temperatures (K)
+  Tsoil,             &! Soil layer temperatures (K)
+  Tsrf,              &! Surface skin temperature (K)
+  Tveg                ! Vegetation temperature (K)
 
 implicit none
 
@@ -43,30 +48,46 @@ character(len=3), intent(in) :: &
 
 integer :: &
   i,j,               &! Point counters
-  N                   ! Diagnostic counter
+  k                   ! Level counter
 
 real :: &
   alb(Nx,Ny),        &! Effective albedo
   snowdepth(Nx,Ny),  &! Snow depth (m)
   SWE(Nx,Ny)          ! Snow water equivalent (kg/m^2) 
 
-#if TXTOUT == 0
-! Output samples
+real :: &
+  zl                  ! Height of layer above ground (m)
+
+! Output state variable samples and profiles
 if (type == 'smp') then
+
   do j = 1, Ny
   do i = 1, Nx
     snowdepth(i,j) = sum(Ds(:,i,j))
     SWE(i,j) = sum(Sice(:,i,j)) + sum(Sliq(:,i,j))
   end do
   end do
-  if (Nx == 1 .or. Ny == 1) then
-    write(usmp,100) year,month,day,hour,snowdepth(:,:),SWE(:,:),Sveg(:,:)
+  write(usmp,100) year,month,day,hour,snowdepth(:,:),SWE(:,:),Sveg(:,:),  &
+                                      Tsoil(2,:,:),Tsrf(:,:),Tveg(:,:)
+
+  if (Nx*Ny == 1) then
+    write(uprf,'(5i4)') year,month,day,Nsnow(1,1),Nsoil
+    zl = snowdepth(1,1)
+    do k = 1, Nsnow(1,1)
+      zl = zl - 0.5*Ds(k,1,1)
+      write(uprf,'(6e14.5)') zl,Ds(k,1,1),Tsnow(k,1,1),rgrn(k,1,1),Sice(k,1,1),Sliq(k,1,1)
+      zl = zl - 0.5*Ds(k,1,1)
+    end do
+    zl = 0
+    do k = 1, Nsoil
+      zl = zl - 0.5*Dzsoil(k)
+      write(uprf,'(4e14.5)') zl,Dzsoil(k),Tsoil(k,1,1),theta(k,1,1)
+      zl = zl - 0.5*Dzsoil(k)
+    end do
   else
-    write(usmp,'(4i4)') year,month,day,hour
-    write(usmp,*) snowdepth(:,:)
-    write(usmp,*) SWE(:,:)
-    write(usmp,*) Sveg(:,:)
+    stop 'Profile output only available for 1D simulations'
   end if
+
 end if
 
 ! Output and reset averages
@@ -81,31 +102,12 @@ if (type == 'ave') then
   end do
   end do
   diags(:,:,:) = diags(:,:,:) / Nave
-  if (Nx == 1 .or. Ny == 1) then
-    write(uave,100) year,month,day,hour,alb,diags(:,:,:)
-  else
-    write(uave,'(3i4)') year,month,day
-    do n = 1, Ndiags
-      write(uave,*) diags(:,:,n)
-    end do
-  end if
+  write(uave,100) year,month,day,hour,alb,diags(:,:,:)
   diags(:,:,:) = 0
   SWin(:,:) = 0
   SWout(:,:) = 0
 end if
 
 100 format(3(i4),*(f12.3))
-#endif
-
-#if TXTOUT == 1
-if (type == 'smp') then
-  write(ueng,200) year,month,day,hour,hfds,hfdsn,hfls,hfmlt,hfrs,hfsbl,hfss,rlus,rsus
-  write(uwat,200) year,month,day,hour,esn,evspsbl,evspsblsoi,evspsblveg,mrrob,mrros,   &
-                  sbl,snm,snmsl,tran
-  write(usta,200) year,month,day,hour,albedo,albsn,cw,lqsn,lwsnl,mrfsofr(:),mrlqso(:), &
-                  mrlsl(:),snc,snd,snw,snwc,tcs,tgs,ts,tsl(:),tsn,tsns
-end if
-200 format(3(i4),*(e14.5))
-#endif
 
 end subroutine OUTPUT

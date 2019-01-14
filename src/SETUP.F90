@@ -5,7 +5,6 @@ subroutine SETUP
 
 #include "OPTS.h"
 
-use CMOR
 use CONSTANTS
 use DIAGNOSTICS
 use DRIVING
@@ -19,11 +18,9 @@ use STATE_VARIABLES
 implicit none
 
 character(len=70) :: &
-  ave_file,          &! Average output file name
   dmp_file,          &! Dump file name
   met_file,          &! Driving file name
   runid,             &! Run identifier
-  smp_file,          &! Sample output file name
   start_file          ! Start file name
 
 character(len=70) :: &
@@ -59,10 +56,10 @@ namelist  /initial/ fsat,Tprof,start_file
 namelist     /maps/ alb0,canh,fcly,fsnd,fsky,fveg,hcan,scap,trcn,VAI,z0sf,  &
                     alb0_file,canh_file,fcly_file,fsnd_file,fsky_file,fveg_file, &
                     hcan_file,scap_file,trcn_file,VAI_file,z0sf_file 
-namelist  /outputs/ Nave,Nsmp,ave_file,dmp_file,smp_file,runid
+namelist  /outputs/ Nave,Nsmp,runid
 namelist   /params/ asmx,asmn,avg0,avgs,bstb,bthr,cden,cvai,cveg,eta0,Gcn1,Gcn2,gsat,gsnf,  &
-                    hfsn,kdif,kfix,kveg,Nitr,rchd,rchz,rho0,rhob,rhoc,rhof,rcld,rmlt,Salb,  &
-                    snda,Talb,tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn
+                    hfsn,kdif,kfix,kveg,Nitr,rchd,rchz,rgr0,rho0,rhob,rhoc,rhof,rcld,rmlt,  &
+                    Salb,snda,Talb,tcnc,tcnm,tcld,tmlt,trho,Wirr,z0sn
 
 ! Grid parameters
 Nx = 1
@@ -145,6 +142,7 @@ rhob = 0
 rhoc = 0
 rhof = 100
 rcld = 300
+rgr0 = 5e-5
 rmlt = 500
 Salb = 10
 snda = 2.8e-6
@@ -248,6 +246,7 @@ allocate(albs(Nx,Ny))
 allocate(Ds(Nsmax,Nx,Ny))
 allocate(Nsnow(Nx,Ny))
 allocate(Qcan(Nx,Ny))
+allocate(rgrn(Nsmax,Nx,Ny))
 allocate(Sice(Nsmax,Nx,Ny))
 allocate(Sliq(Nsmax,Nx,Ny))
 allocate(Sveg(Nx,Ny))
@@ -263,6 +262,7 @@ albs(:,:)    = 0.8
 Ds(:,:,:)    = 0
 Nsnow(:,:)   = 0
 Qcan(:,:)    = 0
+rgrn(:,:,:)  = rgr0
 Sice(:,:,:)  = 0
 Sliq(:,:,:)  = 0
 Sveg(:,:)    = 0
@@ -312,26 +312,14 @@ SWin(:,:) = 0
 SWout(:,:) = 0
 Nave = 24
 Nsmp = 12
-ave_file = 'ave'
 dmp_file = 'dump'
-smp_file = 'smp'
 runid = 'none'
 read(5, outputs)
 if (runid == 'none') runid = ''
 open(udmp, file = trim(runid) // trim(dmp_file))
-#if TXTOUT == 0
-open(uave, file = trim(runid) // trim(ave_file))
-open(usmp, file = trim(runid) // trim(smp_file))
-#endif
-#if TXTOUT == 1
-open(ueng, file = trim(runid) // 'ebal.txt')
-open(usta, file = trim(runid) // 'svar.txt')
-open(uwat, file = trim(runid) // 'wbal.txt')
-allocate(mrfsofr(Nsoil))
-allocate(mrlqso(Nsoil))
-allocate(mrlsl(Nsoil))
-allocate(tsl(Nsoil))
-#endif
+open(uave, file = trim(runid) // 'ave')
+if (Nx*Ny == 1) open(uprf, file = trim(runid) // 'prf')
+open(usmp, file = trim(runid) // 'smp')
 
 ! Write options and namelists to metadata file
 #if DRIV1D == 0
@@ -400,11 +388,6 @@ allocate(tsl(Nsoil))
 #elif SNFRAC == 1
 #define SNFRAC_OPT 'snow cover fraction tanh(h/hf)'
 #endif
-#if TXTOUT == 0
-#define TXTOUT_OPT 'sample and average output files'
-#elif TXTOUT == 1
-#define TXTOUT_OPT 'ESM-SnowMIP output tables'
-#endif
 open(umta, file =  trim(runid) // 'runinfo')
 write(umta,*) '##################################'
 write(umta,*) '#                                #'
@@ -432,7 +415,6 @@ write(umta,*) 'DENSTY=',DENSTY,'! ',DENSTY_OPT
 write(umta,*) 'EXCHNG=',EXCHNG,'! ',EXCHNG_OPT
 write(umta,*) 'CANMOD=',HYDROL,'! ',HYDROL_OPT
 write(umta,*) 'SNFRAC=',SNFRAC,'! ',SNFRAC_OPT
-write(umta,*) 'TXTOUT=',TXTOUT,'! ',TXTOUT_OPT
 write(umta,*) '/'
 write(umta,*)
 write(umta,'(a)') 'NAMELISTS'

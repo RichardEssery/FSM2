@@ -5,12 +5,6 @@ subroutine PHYSICS
 
 #include "OPTS.h"
 
-use CMOR, only : &
-  evspsbl,           &! Total water vapour flux from surface (kg/m^2/s)
-  hfls,              &! Surface upward latent heat flux (W/m^2)
-  hfss,              &! Surface upward sensible heat flux (W/m^2)
-  mrros               ! Surface runoff (kg/m^2/s)
-
 use GRID, only: &
   Nsmax,             &! Maximum number of snow layers
   Nsoil,             &! Number of soil layers
@@ -94,15 +88,6 @@ call SNOW(Esrf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff)
 
 call SOIL(csoil,Gsoil,ksoil)
 
-#if TXTOUT == 0
-call CUMULATE(alb,G,H,Hsrf,LE,LEsrf,Melt,Rnet,Roff,Rsrf)
-#endif
-
-#if TXTOUT == 1
-evspsbl = Esrf(1,1)
-hfls = LE(1,1)
-hfss = H(1,1)
-mrros = Roff(1,1)
-#endif
+call CUMULATE(alb,G,Gsoil,H,Hsrf,LE,LEsrf,Melt,Rnet,Roff,Rsrf)
 
 end subroutine PHYSICS

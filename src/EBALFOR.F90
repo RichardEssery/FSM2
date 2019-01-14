@@ -6,11 +6,6 @@ subroutine EBALFOR(Ds1,KHa,KHg,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1,Tveg0,  &
 
 #include "OPTS.h"
 
-use CMOR, only : &
-  rlus,              &! Surface upwelling longwave radiation (W/m^2)
-  tcs,               &! Vegetation canopy temperature (K)
-  ts                  ! Surface temperature (K)
-
 use CONSTANTS, only : &
   cp,                &! Specific heat capacity of air (J/K/kg)
   Lf,                &! Latent heat of fusion (J/kg)
@@ -228,12 +223,6 @@ do i = 1, Nx
       LEsrf(i,j) = Ls*Esrf(i,j)
       Hsrf(i,j) = Rnet(i,j) - G(i,j) - LEsrf(i,j) - Lf*Melt(i,j)
     end if
-
-#if TXTOUT == 1
-   rlus = trcn(i,j)*sb*Tsrf(i,j)**4 + (1 - trcn(i,j))*sb*Tveg(i,j)**4
-   tcs = Tveg(1,1)
-   ts = (rlus/sb)**0.25
-#endif
 
   end if
 end do

@@ -5,22 +5,6 @@ subroutine SNOW(Esrf,G,ksnow,ksoil,Melt,unload,Gsoil,Roff)
 
 #include "OPTS.h"
 
-use CMOR, only : &
-  esn,               &! Liquid water evaporation from snowpack (kg/m^2/s)
-  hfdsn,             &! Downward heat flux into snowpack (W/m^2)
-  hfmlt,             &! Energy of fusion (W/m^2)
-  hfrs,              &! Energy transferred to snowpack by rain (W/m^2)
-  hfsbl,             &! Energy of sublimation (W/m^2)
-  lqsn,              &! Mass fraction of liquid water in snowpack
-  lwsnl,             &! Liquid water content of snowpack (kg/m^2)
-  sbl,               &! Sublimation of snow (kg/m^2/s)
-  snd,               &! Snowdepth (m)
-  snm,               &! Surface snow melt (kg/m^2/s)
-  snmsl,             &! Water flowing out of snowpack (kg/m^2/s)
-  snw,               &! Mass of snowpack (kg/m^2)
-  tsn,               &! Snow internal temperature (K)
-  tsns                ! Snow surface temperature (K)
- 
 use CONSTANTS, only: &
   grav,              &! Acceleration due to gravity (m/s^2)
   hcap_ice,          &! Specific heat capacity of ice (J/K/kg)
@@ -47,6 +31,7 @@ use GRID, only: &
 
 use PARAMETERS, only: &
   eta0,              &! Reference snow viscosity (Pa s)
+  rgr0,              &! Fresh snow grain radius (m)
   rho0,              &! Fixed snow density (kg/m^3)
   rhob,              &! Temperature factor in fresh snow density (kg/m^3/K)
   rhoc,              &! Wind factor in fresh snow density (kg s^0.5/m^3.5)
@@ -60,6 +45,7 @@ use PARAMETERS, only: &
 use STATE_VARIABLES, only: &
   Ds,                &! Snow layer thicknesses (m)
   Nsnow,             &! Number of snow layers
+  rgrn,              &! Snow layer grain radius (m)
   Sice,              &! Ice content of snow layers (kg/m^2)
   Sliq,              &! Liquid content of snow layers (kg/m^2)
   Tsnow,             &! Snow layer temperatures (K)
@@ -92,6 +78,7 @@ real :: &
   dnew,              &! New snow layer thickness (m)
   dSice,             &! Change in layer ice content (kg/m^2)
   Esnow,             &! Snow sublimation rate (kg/m^2/s)
+  ggr,               &! Grain area growth rate (m^2/s)
   mass,              &! Mass of overlying snow (kg/m^2)
   phi,               &! Porosity
   rhonew,            &! Density of new snow (kg/m^3)
@@ -110,6 +97,7 @@ real :: &
   E(Nsmax),          &! Energy contents before adjustment (J/m^2)
   Gs(Nsmax),         &! Thermal conductivity between layers (W/m^2/k)
   rhs(Nsmax),        &! Matrix equation rhs
+  R(Nsmax),          &! Snow grain radii before adjustment (kg/m^2)
   S(Nsmax),          &! Ice contents before adjustment (kg/m^2)
   U(Nsmax),          &! Layer internal energy contents (J/m^2)
   W(Nsmax)            ! Liquid contents before adjustment (kg/m^2)
@@ -265,6 +253,21 @@ do i = 1, Nx
     end do
 #endif
 
+  ! Snow grain growth
+!#if SGRAIN == 0
+    do k = 1, Nsnow(i,j)
+      ggr = 2e-13
+      if (Tsnow(k,i,j) < Tm) then
+        if (rgrn(k,i,j) < 1.50e-4) then
+          ggr = 2e-14
+        else
+          ggr = 7.3e-8*exp(-4600/Tsnow(k,i,j))
+        end if
+      end if
+      rgrn(k,i,j) = rgrn(k,i,j) + dt*ggr/rgrn(k,i,j)
+    end do
+!#endif
+
   end if  ! Existing snowpack
 end do
 end do
@@ -273,7 +276,7 @@ end do
 do j = 1, Ny
 do i = 1, Nx
 
-! Add snowfall and frost to layer 1 with fresh snow density
+! Add snowfall and frost to layer 1 with fresh snow density and grain size
   Esnow = 0
   if (Esrf(i,j) < 0 .and. Tsrf(i,j) < Tm) Esnow = Esrf(i,j)
   dSice = (Sf(i,j) - Esnow)*dt
@@ -283,9 +286,11 @@ do i = 1, Nx
   rhonew = max(rhof + rhob*(Ta(i,j) - Tm) + rhoc*Ua(i,j)**0.5, 50.)
 #endif
   Ds(1,i,j) = Ds(1,i,j) + dSice / rhonew
+  if (Sice(1,i,j) + dSice > epsilon(Sice))  &
+    rgrn(1,i,j) = (Sice(1,i,j)*rgrn(1,i,j) + dSice*rgr0) / (Sice(1,i,j) + dSice)
   Sice(1,i,j) = Sice(1,i,j) + dSice
 
-! Add canopy unloading to layer 1 with bulk snow density
+! Add canopy unloading to layer 1 with bulk snow density and grain size
   rhos = rhof
   mass = sum(Sice(:,i,j)) + sum(Sliq(:,i,j))
   snowdepth = sum(Ds(:,i,j))
@@ -302,6 +307,7 @@ do i = 1, Nx
 
 ! Store state of old layers
   D(:) = Ds(:,i,j)
+  R(:) = rgrn(:,i,j)
   S(:) = Sice(:,i,j)
   W(:) = Sliq(:,i,j)
   do k = 1, Nsnow(i,j)
@@ -312,6 +318,7 @@ do i = 1, Nx
 
 ! Initialise new layers
   Ds(:,i,j) = 0
+  rgrn(:,i,j) = 0
   Sice(:,i,j) = 0
   Sliq(:,i,j) = 0
   Tsnow(:,i,j) = Tm
@@ -343,6 +350,7 @@ do i = 1, Nx
       do
         if (D(kold) < dnew) then
         ! All snow from old layer partially fills new layer
+          rgrn(knew,i,j) = rgrn(knew,i,j) + S(kold)*R(kold)
           Sice(knew,i,j) = Sice(knew,i,j) + S(kold)
           Sliq(knew,i,j) = Sliq(knew,i,j) + W(kold)
           U(knew) = U(knew) + E(kold)
@@ -351,6 +359,7 @@ do i = 1, Nx
         else
         ! Some snow from old layer fills new layer
           wt = dnew / D(kold)
+          rgrn(knew,i,j) = rgrn(knew,i,j) + wt*S(kold)*R(kold)
           Sice(knew,i,j) = Sice(knew,i,j) + wt*S(kold) 
           Sliq(knew,i,j) = Sliq(knew,i,j) + wt*W(kold)
           U(knew) = U(knew) + wt*E(kold)
@@ -368,42 +377,13 @@ do i = 1, Nx
   ! Diagnose snow layer temperatures
     do k = 1, Nsnow(i,j)
      csnow(k) = Sice(k,i,j)*hcap_ice + Sliq(k,i,j)*hcap_wat
-     if (csnow(k) > epsilon(csnow)) Tsnow(k,i,j) = Tm + U(k) / csnow(k)
+     Tsnow(k,i,j) = Tm + U(k) / csnow(k)
+     rgrn(k,i,j) = rgrn(k,i,j) / Sice(k,i,j)
     end do
 
   end if ! Existing or new snowpack
 
 end do
 end do
-
-#if TXTOUT == 1
-esn = 0
-snd = snowdepth
-snm = Melt(1,1)
-snw = sum(Sice(:,1,1)) + sum(Sliq(:,1,1))
-hfdsn = 0
-hfmlt = 0 
-hfrs = 0
-hfsbl = 0
-sbl = 0
-snmsl = 0
-tsns = Tm
-if (snw > 0) then
-  hfdsn = G(1,1)
-  hfmlt = Lf*Melt(1,1)
-  hfsbl = Ls*Esrf(1,1)
-  sbl = Esrf(1,1)
-  snmsl = Roff(1,1)
-  tsns = Tsrf(1,1)
-end if
-lqsn = 0
-lwsnl = 0
-tsn = 0
-do k = 1, Nsnow(1,1)
-  lqsn = lqsn + Sliq(k,1,1) / snw
-  lwsnl = lwsnl + Sliq(k,1,1)
-  tsn = tsn + (Sice(k,1,1) + Sliq(k,1,1))*Tsnow(k,1,1) / snw
-end do
-#endif
 
 end subroutine SNOW

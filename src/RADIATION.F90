@@ -5,12 +5,6 @@ subroutine RADIATION(alb,fsnow,SWsrf,SWveg)
 
 #include "OPTS.h"
 
-use CMOR, only : &
-  albedo,            &! Surface albedo
-  albsn,             &! Snow albedo
-  rsus,              &! Surface upwelling shortwave radiation (W/m^2)
-  snc                 ! Snow area fraction	
-
 use CONSTANTS, only: &
   I0,                &! Solar constant (W/m^2)
   sb,                &! Stefan-Boltzmann constant (W/m^2/K^4)
@@ -165,12 +159,5 @@ do i = 1, Nx
   LW(i,j) = fsky(i,j)*LW(i,j) + (1 - fsky(i,j))*sb*Ta(i,j)**4
 end do
 end do
-
-#if TXTOUT == 1
-albedo = alb(1,1)
-albsn = albs(1,1)
-rsus = (1 - albedo)*SW(1,1)
-snc = fsnow(1,1)
-#endif
 
 end subroutine RADIATION

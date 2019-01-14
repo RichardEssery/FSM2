@@ -522,22 +522,23 @@ Documentation & Code & Units \\
 \multicolumn{3}{|c|}{Forest canopy} \\
 \hline
 Canopy air space specific humidity $Q_c$ & {\tt Qcan} & kg kg$^{-1}$ \\
-Snow mass on canopy $S_v$ & {\tt Sveg} & W m$^{-2}$ \\
-Canopy air space $T_c$ & {\tt Tveg} & K \\
-Vegetation temperature $T_v$ & {\tt Tveg} & K \\
+Snow mass on canopy $S_v$                & {\tt Sveg} & W m$^{-2}$   \\
+Canopy air space $T_c$                   & {\tt Tveg} & K            \\
+Vegetation temperature $T_v$             & {\tt Tveg} & K            \\
 \hline 
 \multicolumn{3}{|c|}{Surface} \\
 \hline 
-Surface skin temperature $T_*$ & {\tt Tsrf} & K \\
+Surface skin temperature $T_*$           & {\tt Tsrf} & K            \\
 \hline 
-\multicolumn{3}{|c|}{Snow on the ground (up to {\tt Nsmax} layers)} \\
+\multicolumn{3}{|c|}{Snow on the ground (up to {\tt Nsmax} layers)}  \\
 \hline 
-Number of snow layers $N_{\rm snow}$ & {\tt Nsnow} & - \\
-Thickness of snow layers $D_s$ & {\tt Ds} & m \\
-Ice content of snow layers $I$ & {\tt Sice} & kg m$^{-2}$ \\
-Liquid water content of snow layers $W$ & {\tt Sliq} & kg m$^{-2}$ \\
-Temperature of snow layers $T_s$ & {\tt Tsnow} & K \\
-Albedo of snow $\alpha_s$ & {\tt albs} & - \\
+Number of snow layers $N_{\rm snow}$     & {\tt Nsnow} & -           \\
+Albedo of snow $\alpha_s$                & {\tt albs}  & -           \\
+Thickness of snow layers $D_s$           & {\tt Ds}    & m           \\
+Radii of grains in snow layers $r$       & {\tt rgrn}  & m           \\
+Ice content of snow layers $I$           & {\tt Sice}  & kg m$^{-2}$ \\
+Liquid water content of snow layers $W$  & {\tt Sliq}  & kg m$^{-2}$ \\
+Temperature of snow layers $T_s$         & {\tt Tsnow} & K           \\
 \hline 
 \multicolumn{3}{|c|} {Soil ({\tt Nsoil} layers)} \\
 \hline 
@@ -553,18 +554,19 @@ Table 3. Model state variables in the code and documentation.
 \hline
 Documentation & Code & Default \\
 \hline
-Snow-free albedo $\alpha_0$ & {\tt alb0} & 0.2 \\
-Canopy heat capacity $C_{\rm can}$ & {\tt canh} & $2500\Lambda$ (J K$^{-1}$ m$^{-2}$) \\
-Soil clay fraction $f_{\rm clay}$ & {\tt fcly} & 0.3 \\
-Soil sand fraction $f_{\rm sand}$ & {\tt fsnd} & 0.6 \\
-Sky view fraction $f_{\rm sky}$ & {\tt fsky} & $\exp(-k_{\rm dif}\Lambda)$ \\
-Canopy cover fraction $f_{\rm veg}$ & {\tt fveg} & $1 - \exp(-\Lambda)$ \\
-Canopy height $h_{\rm can}$ & {\tt hcan} & 0 m \\
-Vegetation area index $\Lambda$ & {\tt VAI} & 0 \\
-Snow-free ground roughness length $z_{0g}$ & {\tt z0sf} & 0.1 m \\
-Timestep $\delta t$ & {\tt dt} & 3600 s \\
-Temperature and humidity measurement height $z_T$ & {\tt zT} & 2 m  \\
-Wind speed measurement height $z_U$ & {\tt zU} & 10 m  \\
+Snow-free albedo $\alpha_0$         & {\tt alb0} & 0.2                                 \\
+Canopy heat capacity $C_{\rm can}$  & {\tt canh} & $2500\Lambda$ (J K$^{-1}$ m$^{-2}$) \\
+Soil clay fraction $f_{\rm clay}$   & {\tt fcly} & 0.3                                 \\
+Soil sand fraction $f_{\rm sand}$   & {\tt fsnd} & 0.6                                 \\
+Sky view fraction $f_{\rm sky}$     & {\tt fsky} & $\exp(-k_{\rm dif}\Lambda)$         \\
+Canopy cover fraction $f_{\rm veg}$ & {\tt fveg} & $1 - \exp(-\Lambda)$                \\
+Canopy height $h_{\rm can}$         & {\tt hcan} & 0 m                                 \\
+Latitude $\phi$                     & {\tt lat}  & 0$^\circ$                           \\
+Vegetation area index $\Lambda$     & {\tt VAI}  & 0                                   \\
+Snow-free ground roughness length $z_{0g}$ & {\tt z0sf} & 0.1 m                        \\
+Timestep $\delta t$                 & {\tt dt}   & 3600 s                              \\
+Temperature and humidity measurement height $z_T$& {\tt zT} & 2 m                      \\
+Wind speed measurement height $z_U$ & {\tt zU}   & 10 m                                \\
 \hline 
 \end{tabular}
 
@@ -591,12 +593,13 @@ Leaf angle distribution parameter $G_1$            & {\tt Gcn1}   & 0.5         
 Leaf angle distribution parameter $G_2$            & {\tt Gcn2}   & 0                    \\
 Diffuse radiation extinction coefficient $k_{\rm dif}$ & {\tt kdif} &  0.5               \\
 Fixed snow thermal conductivity $\lambda_0$        & {\tt kfix} & 0.24 W m$^{-1}$ K$^{-1}$ \\
-Canopy cover coefficient $k_{\rm veg}$             & {\tt kveg} &  1 \\
-Displacement height to canopy height ratio $R_d$   & {\tt rchd} & 0.67 \\
-Roughness length to canopy height ratio $R_{z0}$   & {\tt rchz} & 0.1 \\
-Fixed snow density $\rho_0$ & {\tt rho0}           & 300 kg m$^{-3}$ \\
-Temperature factor in fresh snow density $b _\rho$ & {\tt rhob} & 0 kg m$^{-3}$ K$^{-1}$ \\
-Wind factor in fresh snow density $c_\rho$       & {\tt rhoc} & 0 kg m$^{-7/2}$ s$^{1/2}$\\
+Canopy cover coefficient $k_{\rm veg}$             & {\tt kveg}   &  1 \\
+Displacement height to canopy height ratio $R_d$   & {\tt rchd}   & 0.67 \\
+Roughness length to canopy height ratio $R_{z0}$   & {\tt rchz}   & 0.1 \\
+Fresh snow grain radius $r_0$                      & {\tt rgr0}   & $5\times10^{-5}$ m \\
+Fixed snow density $\rho_0$                        & {\tt rho0}   & 300 kg m$^{-3}$ \\
+Temperature factor in fresh snow density $b _\rho$ & {\tt rhob}   & 0 kg m$^{-3}$ K$^{-1}$ \\
+Wind factor in fresh snow density $c_\rho$         & {\tt rhoc}   & 0 kg m$^{-7/2}$ s$^{1/2}$\\
 Fresh snow density $\rho_f$ & {\tt rhof}           & 100 kg m$^{-3}$ \\
 Maximum density for cold snow $\rho_{\rm cold}$    & {\tt rcld} & 300 kg m$^{-3}$ \\
 Maximum density for melting snow $\rho_{\rm melt}$ & {\tt rmlt} & 500 kg m$^{-3}$ \\

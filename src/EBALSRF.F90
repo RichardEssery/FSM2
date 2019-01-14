@@ -6,11 +6,6 @@ subroutine EBALSRF(Ds1,KH,KHa,KHv,KWg,KWv,ks1,SWsrf,SWveg,Ts1, &
 
 #include "OPTS.h"
 
-use CMOR, only : &
-  rlus,              &! Surface upwelling longwave radiation (W/m^2)
-  tcs,               &! Vegetation canopy temperature (K)
-  ts                  ! Surface temperature (K)
-
 use CONSTANTS, only: &
   cp,                &! Specific heat capacity of air (J/K/kg)
   Lf,                &! Latent heat of fusion (J/kg)
@@ -162,10 +157,6 @@ do i = 1, Nx
     Hsrf(i,j) = H(i,j)
     LEsrf(i,j) = LE(i,j)
     Rsrf(i,j) = Rnet(i,j)
-#if TXTOUT == 1
-    rlus = sb*Tsrf(i,j)**4
-    ts = Tsrf(1,j)
-#endif
 
 #if CANMOD == 0
     ! Add fluxes from canopy in zero-layer model
@@ -178,11 +169,6 @@ do i = 1, Nx
       LE(i,j) = LE(i,j) + Lh*Eveg(i,j)
       Rnet(i,j) = Rnet(i,j) + SWveg(i,j) +  &
                   (1 - trcn(i,j))*(LW(i,j) + sb*Tsrf(i,j)**4 - 2*sb*Tveg(i,j)**4)
-#if TXTOUT == 1
-      rlus = trcn(i,j)*sb*Tsrf(i,j)**4 + (1 - trcn(i,j))*sb*Tveg(i,j)**4
-      tcs = Tveg(1,1)
-      ts = (rlus/sb)**0.25
-#endif
     end if
 #endif
 #if CANMOD == 1

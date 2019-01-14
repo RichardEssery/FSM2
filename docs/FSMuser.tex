@@ -82,17 +82,6 @@ Option number & Description & Options   \\
 \hline
 \end{longtable}
 
-\subsection{Output compilation options }
-\begin{longtable}{|l|l|l|}
-\hline
-Option number & Description & Options \\
-\hline
-{\tt TXTOUT} & Text output format
-&   0 - sample and average files      \\
-& & 1 - ESM-SnowMIP output tables     \\
-\hline
-\end{longtable}
-
 \section{Running the model}
 
 FSM2 requires meteorological driving data and namelists to set options and parameters. The model is run with the commands {\tt ./FSM2 < nlst.txt} or {\tt FSM2.exe < nlst.txt}, where {\tt nlst.txt} is a text file containing eight namelists described in tables below. All of the namelists have to be present in the order of the tables, but any or all of the variables listed in a namelist can be omitted; defaults are then used.
@@ -205,6 +194,7 @@ Parameter & Default & Description & Used by \\
 {\tt Salb} & 10 kg m$^{-2}$ & Snowfall to refresh albedo              &{\tt ALBEDO=1} \\
 {\tt tcld} & 1000 h         & Cold snow albedo decay time scale       &{\tt ALBEDO=1} \\
 {\tt tcld} & 100 h          & Melting snow albedo decay time scale    &{\tt ALBEDO=1} \\
+{\tt rgr0} & $5\times10^{-5}$ m & Fresh snow grain radius             &               \\
 \hline 
 \hline 
 \multicolumn{4}{|c|}{Snow thermal conductivity parameters} \\
@@ -325,9 +315,10 @@ Variable & Units & Description \\
 {\tt Ds(Nsmax,Nx,Ny)}    & m            & Thickness of snow layers                   \\
 {\tt Nsnow(Nx,Ny)}       & -            & Number of snow layers                      \\
 {\tt Qcan(Nx,Ny)}        & kg kg$^{-1}$ & Canopy air space specific humidity         \\
+{\tt rgrn(Nsmax,Nx,Ny)}  & m            & Snow grain radii in layers                 \\
 {\tt Sice(Nsmax,Nx,Ny)}  & kg m$^{-2}$  & Ice content of snow layers                 \\
 {\tt Sliq(Nsmax,Nx,Ny)}  & kg m$^{-2}$  & Liquid content of snow layers              \\
-{\tt Sveg(Nx,Ny)}        & W m$^{-2}$   & Snow mass on canopy                        \\
+{\tt Sveg(Nx,Ny)}        & W m$^{-2}$   & Snow mass on vegetation                    \\
 {\tt Tcan(Nx,Ny)}        & K            & Canopy air space temperature               \\
 {\tt theta(Nsoil,Nx,Ny)} & -            & Volumetric moisture content of soil layers \\
 {\tt Tsnow(Nsmax,Nx,Ny)} & K            & Temperature of snow layers                 \\
@@ -354,52 +345,65 @@ Variable & Default & Description \\
 
 A run identifier, if specified, is prefixed on all output file names. If the run identifier includes a directory name (e.g. {\tt runid = 'output/'}), the directory has to exist before the model is run. A metadata file {\tt runid+'runifo'} containing copies of all the namelists and compilation options is written at the start of a run, and the state variables are written to a dump file {\tt runid+dump\_file} with the same format as the start file at the end of a run. There are two options for plain text outputs
 
-\subsubsection{Text output option {\tt TXTOUT=0}}
 Flux variable are averaged over {\tt Nave} timesteps and written to file {\tt runid+'ave'}, and state variables are written to file {\tt runid+'smp'} at timestep number {\tt Nsmp} during every averaging period. For the default output frequencies, daily averages and samples at noon will be produced if the driving data has a one-hour timestep and starts at 01:00. Full timeseries are written if {\tt Nave=1} and {\tt Nsmp=1}. 
 
-The sample file has 4 + 3$\times${\tt Nx$\times$Ny} columns:
+The sample file has 4 + 6$\times${\tt Nx$\times$Ny} columns:
 
 \begin{longtable}{|l|l|l|}
 \hline
 Variable & Units & Description \\
 \hline
-{\tt year}        & years       & Year                  \\
-{\tt month}       & months      & Month of the year     \\
-{\tt day}         & days        & Day of the month      \\
-{\tt hour}        & hours       & Hour of the day       \\
-{\tt snd(Nx*Ny)}  & m           & Snow depth            \\
-{\tt SWE(Nx*Ny)}  & kg m$^{-2}$ & Snow water equivalent \\
-{\tt Sveg(Nx*Ny)} & kg m$^{-2}$ & Canopy snow mass      \\
+{\tt year}        & years       & Year                     \\
+{\tt month}       & months      & Month of the year        \\
+{\tt day}         & days        & Day of the month         \\
+{\tt hour}        & hours       & Hour of the day          \\
+{\tt snd(Nx*Ny)}  & m           & Snow depth               \\
+{\tt SWE(Nx*Ny)}  & kg m$^{-2}$ & Snow water equivalent    \\
+{\tt Sveg(Nx*Ny)} & kg m$^{-2}$ & Snow mass on vegetation  \\
+{\tt Tsrf(Nx*Ny)} & K           & Surface temperature      \\
+{\tt Tsoil(Nx*Ny)}& K           & Level 2 soil temperature \\
+{\tt Tveg(Nx*Ny)} & K           & Vegetation temperature   \\
 \hline 
 \end{longtable}
 
-The average file has 3 + 12$\times${\tt Nx$\times$Ny} columns:
+The average file has 4 + 11$\times${\tt Nx$\times$Ny} columns:
 
 \begin{longtable}{|l|l|l|}
 \hline
 Variable & Units & Description \\
 \hline
-{\tt year}         & years        & Year                                 \\
-{\tt month}        & months       & Month of the year                    \\
-{\tt day}          & days         & Day of the month                     \\
-{\tt alb(Nx*Ny)}   & -            & Flux-weighted albedo                 \\
-{\tt G(Nx*Ny)}     & W m$^{-2}$  & Ground heat flux                     \\
-{\tt H(Nx*Ny)}     & W m$^{-2}$  & Sensible heat flux to the atmosphere \\
-{\tt Hsrf(Nx*Ny)}  & W m$^{-2}$  & Sensible heat flux from the surface  \\
-{\tt LE(Nx*Ny)}    & W m$^{-2}$  & Latent heat flux to the atmosphere   \\
-{\tt LEsrf(Nx*Ny)} & W m$^{-2}$  & Latent heat flux from the surface    \\
-{\tt Melt(Nx*Ny)}  & kg m$^{-2}$ & Cumulated melt                       \\
-{\tt Rnet(Nx*Ny)}  & W m$^{-2}$  & Net radiation                        \\
-{\tt Roff(Nx*Ny)}  & kg m$^{-2}$ & Cumulated runoff                     \\
-{\tt Rsrf(Nx*Ny)}  & W m$^{-2}$  & Net radiation absorbed by the surface\\
-{\tt Tsrf(Nx*Ny)}  & $^\circ$C    & Surface temperature                  \\
-{\tt Tsoil(Nx*Ny)} & $^\circ$C    & 20 cm soil temperature               \\
+{\tt year}        & years       & Year                                 \\
+{\tt month}       & months      & Month of the year                    \\
+{\tt day}         & days        & Day of the month                     \\
+{\tt hour}        & hours       & Hour of the day                      \\
+{\tt alb(Nx*Ny)}  & -           & Flux-weighted albedo                 \\
+{\tt G(Nx*Ny)}    & W m$^{-2}$  & Ground heat flux                     \\
+{\tt Gsoil(Nx*Ny)}& W m$^{-2}$  & Heat flux into soil                  \\
+{\tt H(Nx*Ny)}    & W m$^{-2}$  & Sensible heat flux to the atmosphere \\
+{\tt Hsrf(Nx*Ny)} & W m$^{-2}$  & Sensible heat flux from the surface  \\
+{\tt LE(Nx*Ny)}   & W m$^{-2}$  & Latent heat flux to the atmosphere   \\
+{\tt LEsrf(Nx*Ny)}& W m$^{-2}$  & Latent heat flux from the surface    \\
+{\tt Melt(Nx*Ny)} & kg m$^{-2}$ & Cumulated melt                       \\
+{\tt Rnet(Nx*Ny)} & W m$^{-2}$  & Net radiation                        \\
+{\tt Roff(Nx*Ny)} & kg m$^{-2}$ & Cumulated runoff                     \\
+{\tt Rsrf(Nx*Ny)} & W m$^{-2}$  & Net radiation absorbed by the surface\\
 \hline 
 \end{longtable}
 
-\subsubsection{Text output option {\tt TXTOUT=1}}
-Energy fluxes, water fluxes and state variables are written on the {\tt Nsmp} timesteps to files {\tt runid+'ebal'}, {\tt runid+'wbal'} and {\tt runid+'svar'} with the 
-\href{https://www.geos.ed.ac.uk/~ressery/ESM-SnowMIP/ESMSnowMIP_Reference_sites.pdf}{formats} of ESM-SnowMIP output tables. This option is only available for simulations at a single point ({\tt Nx=Ny=1}).
+For simulations at a single point ({\tt Nx=Ny=1}) vertical profiles of snow and soil state variables are written to file {\tt runid+'prf'}. For each timestep in the profile output file, there is a line
+
+\hskip20pt{\tt year month day hour Nsnow Nsoil}
+
+followed by {\tt Nsnow} lines
+
+\hskip20pt{\tt zl Ds rgrain Sice Sliq Tsnow}
+
+and then {\tt Nsoil} lines
+
+\hskip20pt{\tt zl Dzsoil theta Tsoil},
+
+where {\tt zl} is the height of the middle of a layer above the ground (negative for soil layers).
+
 
 \end{document}
 

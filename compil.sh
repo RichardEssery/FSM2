@@ -24,9 +24,6 @@ cat > OPTS.h << EOF
 #define DEMHDR 0   /* DEM header                  : 0, 1            */
 #define SWPART 0   /* SW radiation partition      : 0, 1, 2         */
 #define ZOFFST 0   /* Measurement height offset   : 0, 1            */
-
-/* Output options                                 : Possible values */
-#define TXTOUT 0   /* Text output format          : 0, 1            */
 EOF
 
 $FC -cpp -o FSM2 -O3  \
