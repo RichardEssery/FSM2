@@ -49,7 +49,7 @@ real, allocatable :: &
   fsat(:),           &! Initial moisture content of soil layers as fractions of saturation
   Tprof(:)            ! Initial soil layer temperatures (K)
 
-namelist    /drive/ met_file,dt,lat,noon,Tlps,Tsnw,zaws,zT,zU
+namelist    /drive/ met_file,dt,lat,noon,Pscl,Tlps,Tsnw,zaws,zT,zU
 namelist /gridpnts/ Nsmax,Nsoil,Nx,Ny,ztop_file
 namelist /gridlevs/ Dzsnow,Dzsoil
 namelist  /initial/ fsat,Tprof,start_file

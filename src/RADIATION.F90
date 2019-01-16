@@ -145,7 +145,7 @@ do i = 1, Nx
   if (elev > 0) tdir = exp(-(Gcn1 + Gcn2*sin(elev))*VAI(i,j)/sin(elev))
 ! Effective albedo and net radiation
   alb(i,j) = acan + (1 - acan)*asrf*tdif**2
-  if (Sdif > epsilon(Sdif))  &
+  if (Sdif + Sdir > epsilon(Sdif))  &
     alb(i,j) = acan + (1 - acan)*asrf*tdif*(tdif*Sdif + tdir*Sdir) / (Sdif + Sdir)
   SWsrf(i,j) = (1 - acan)*(1 - asrf)*(tdif*Sdif + tdir*Sdir)
   SWveg(i,j) = (1 - acan)*(1 - (1 - asrf)*tdif - asrf*tdif*tdif)*Sdif +  &

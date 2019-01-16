@@ -246,7 +246,7 @@ do i = 1, Nx
       if (Ds(k,i,j) > epsilon(Ds)) then
         rhos = (Sice(k,i,j) + Sliq(k,i,j)) / Ds(k,i,j)
         rhos = rhos + (rhos*grav*mass*dt/(eta0*exp(-(Tsnow(k,i,j) - Tm)/12.4 + rhos/55.6))   &
-                    + dt*rhos*snda*exp((Tsnow(k,i,j) - Tm)/23.8 - max(rhos - 150, 0.)/21.7)
+                    + dt*rhos*snda*exp((Tsnow(k,i,j) - Tm)/23.8 - max(rhos - 150, 0.)/21.7))
         Ds(k,i,j) = (Sice(k,i,j) + Sliq(k,i,j)) / rhos
       end if
       mass = mass + 0.5*(Sice(k,i,j) + Sliq(k,i,j))
