@@ -22,8 +22,6 @@ echo #define DOWNSC 0   /* 1D driving data downscaling : 0, 1            */
 echo #define DEMHDR 0   /* DEM header                  : 0, 1            */
 echo #define SWPART 0   /* SW radiation partition      : 0, 1, 2         */
 echo #define ZOFFST 0   /* Measurement height offset   : 0, 1            */
-echo /* Output options                                 : Possible values */
-echo #define TXTOUT 0   /* Text output format          : 0, 1            */
 ) > OPTS.h
 
 set mods= MODULES.f90

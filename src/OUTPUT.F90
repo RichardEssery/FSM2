@@ -84,8 +84,6 @@ if (type == 'smp') then
       write(uprf,'(4e14.5)') zl,Dzsoil(k),Tsoil(k,1,1),theta(k,1,1)
       zl = zl - 0.5*Dzsoil(k)
     end do
-  else
-    stop 'Profile output only available for 1D simulations'
   end if
 
 end if
