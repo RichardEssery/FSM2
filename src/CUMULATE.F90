@@ -39,13 +39,13 @@ SWin(:,:) = SWin (:,:)+ SW(:,:)*dt
 SWout(:,:) = SWout(:,:) + alb(:,:)*SW(:,:)*dt
 diags(:,:,1) = diags(:,:,1) + G(:,:)
 diags(:,:,2) = diags(:,:,2) + Gsoil(:,:)
-diags(:,:,3) = diags(:,:,2) + H(:,:)
-diags(:,:,4) = diags(:,:,3) + Hsrf(:,:)
-diags(:,:,5) = diags(:,:,4) + LE(:,:)
-diags(:,:,6) = diags(:,:,5) + LEsrf(:,:)
-diags(:,:,7) = diags(:,:,6) + Lf*Melt(:,:)
-diags(:,:,8) = diags(:,:,7) + Rnet(:,:)
-diags(:,:,9) = diags(:,:,8) + Roff(:,:) * Nave
-diags(:,:,10) = diags(:,:,9) + Rsrf(:,:)
+diags(:,:,3) = diags(:,:,3) + H(:,:)
+diags(:,:,4) = diags(:,:,4) + Hsrf(:,:)
+diags(:,:,5) = diags(:,:,5) + LE(:,:)
+diags(:,:,6) = diags(:,:,6) + LEsrf(:,:)
+diags(:,:,7) = diags(:,:,7) + Lf*Melt(:,:)
+diags(:,:,8) = diags(:,:,8) + Rnet(:,:)
+diags(:,:,9) = diags(:,:,9) + Roff(:,:) * Nave
+diags(:,:,10) = diags(:,:,10) + Rsrf(:,:)
 
 end subroutine CUMULATE
