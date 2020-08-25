@@ -4,6 +4,9 @@
 # Richard Essery
 # School of GeoSciences
 # University of Edinburgh
+############################################################################
+# Make sure line seperator is Unix-style (LF)
+# see https://www.jetbrains.com/help/pycharm/configuring-line-endings-and-line-separators.html
 #############################################################################
 FC=gfortran
 cd src
