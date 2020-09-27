@@ -1,5 +1,5 @@
 ########################################################################
-# Flexible Snow Model compilation script                               #
+# Flexible Snow Model compilation script for netCDF output             #
 #                                                                      #
 # Richard Essery                                                       #
 # School of GeoSciences                                                #
@@ -24,14 +24,29 @@ cat > OPTS.h << EOF
 #define SWPART 0   /* SW radiation partition        : 0, 1            */
 #define ZOFFST 0   /* measurement height offset     : 0, 1            */
 /* Output options                                   : Possible values */
-#define PROFNC 0   /* netCDF output                 : 0, 1            */
+#define PROFNC 1   /* NetCDF output                 : 0, 1            */
 EOF
 
-$FC -cpp -o FSM2 -O3 FSM2_MODULES.F90 FSM2.F90 FSM2_DRIVE.F90          \
-FSM2_MAP.F90 FSM2_OUTPUT.F90 FSM2_PARAMS.F90 FSM2_TIMESTEP.F90         \
-CANOPY.F90 INTERCEPT.F90 LUDCMP.F90 PSIMH.F90 QSAT.F90 SNOW.F90        \
-SOIL.F90 SOLARPOS.F90 SRFEBAL.F90 SWRAD.F90 THERMAL.F90 TRIDIAG.F90    \
-TWOSTREAM.F90
+files=(FSM2_MODULES.F90 FSM2.F90 FSM2_DRIVE.F90 FSM2_MAP.F90          \
+       FSM2_PARAMS.F90 FSM2_PREPNC.F90 FSM2_TIMESTEP.F90              \
+       FSM2_WRITENC.F90                                               \
+       CANOPY.F90 INTERCEPT.F90 LUDCMP.F90 PSIMH.F90 QSAT.F90         \
+       SNOW.F90 SOIL.F90 SOLARPOS.F90 SRFEBAL.F90 SWRAD.F90           \
+       THERMAL.F90 TRIDIAG.F90)
+> FSM2_temp.f90
+for file in ${files[*]}
+do
+  $FC -cpp -E -P -o out $file
+  cat --squeeze-blank out >> FSM2_temp.f90
+done
+
+$FC -O3 -c -I/usr/lib64/gfortran/modules FSM2_temp.f90
+$FC -o FSM2 FSM2_temp.o -L/usr/lib64 -lnetcdff
 mv FSM2 ../FSM2
+
+rm out
 rm *.mod
+rm *.o
+rm FSM2_temp.f90
 cd ..
+
