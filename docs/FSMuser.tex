@@ -4,281 +4,205 @@
 \usepackage{longtable}
 \title{Flexible Snow Model user guide}
 \author{Richard Essery}
-\date{2 January 2019}
+\date{26 September 2020}
 \begin{document}
 \maketitle
 \parindent0pt
 
 \section{FSM2}
 
-The Flexible Snow Model (FSM2) is a multi-physics energy balance model of snow accumulation and melt, extending the Factorial Snow Model (FSM) with additional physics, driving and output options. FSM2 adds forest canopy model options and the possibility of running simulations for more than one point at the same time. For greater efficiency in long simulations than FSM, which selects physics options when it is run, FSM2 options are selected when the model is compiled. Otherwise, FSM2 is built and run in the same way as FSM.
+The Flexible Snow Model (FSM2) is a multi-physics energy balance model of snow accumulation and melt, extending the Factorial Snow Model (FSM). FSM2 adds forest canopy model options and the possibility of running simulations for more than one point at the same time.
+%, with or without downscaling of meteorological driving variables
+For greater efficiency than FSM, which selects physics options when it is run, FSM2 options are selected when the model is compiled. Otherwise, FSM2 is built and run in the same way as FSM.
 
 \section{Compiling the model}
 
-FSM2 is coded in Fortran and consists of subroutines and modules contained in the {\tt src} directory. A linux executable {\tt FSM2} or a Windows executable {\tt FSM2.exe} is produced by running script {\tt compil.sh} or batch file {\tt compil.bat}. Both use the gfortran compiler but could be edited for other compilers. Driving data, physics and output configurations are selected in the compilation script by defining option numbers that are copied to a preprocessor file {\tt src/OPTS.h} before compilation.
+FSM2 is coded in Fortran and consists of subroutines and modules contained in the {\tt src} directory. An executable {\tt FSM2} is produced by running scripts {\tt compil.sh} or {\tt compil\_nc.sh}. Both use the gfortran compiler, and the latter also requires installation of the Fortran netCDF module for writing outputs. Input, physics and output configurations are selected in the compilation script by defining option numbers that are copied to a preprocessor file {\tt src/OPTS.h} before compilation.
 
-\subsection{Driving data compilation options }
-\begin{longtable}{|l|l|l|}
-\hline
-Option number & Description & Options \\
-\hline
+\subsection{Input options }
+\begin{longtable}{|l|l|l|} \hline
+Option       & Description & Possible values \\ \hline
 {\tt DRIV1D} & 1D driving data format
-&   0 - FSM format \\
-& & 1 - extended data format with SW components\\
-& & 2 - \href{https://www.geos.ed.ac.uk/~ressery/ESM-SnowMIP/ESMSnowMIP_Reference_sites.pdf}{ESM-SnowMIP} format \\
-\hline
-{\tt DOWNSC} & 1D driving data downscaling
-&   0 - no \\
-& & 1 - yes \\
-\hline
-{\tt DEMHDR} & Header information in DEM for downscaling
-&   0 - none \\
-& & 1 - ESRI format \\
-\hline
+&   1 - FSM format \\
+& & 2 - \href{https://www.geos.ed.ac.uk/~ressery/ESM-SnowMIP/ESMSnowMIP_Reference_sites.pdf}{ESM-SnowMIP} format \\ \hline
+{\tt SETPAR} & Parameter selection
+&   0 - Parameters set in module {\tt PARAMETERS} \\
+& & 1 - Parameters can be read from namelist {\tt\&params} \\ \hline
 {\tt SWPART} & Shortwave radiation partition
 &   0 - Total SW radiation used \\
-& & 1 - Diffuse and direct SW calculated \\
-& & 2 - Diffuse and direct SW in extended data \\
-\hline
+& & 1 - Diffuse and direct SW calculated \\ \hline
 {\tt ZOFFST} & Measurement height offset
 &   0 - Height above ground \\
-& & 1 - Height above canopy top \\
-\hline
+& & 1 - Height above canopy top \\ \hline
 \end{longtable}
 
-\subsection{Physics compilation options }
-\begin{longtable}{|l|l|l|}
-\hline
-Option number & Description & Options   \\
-\hline
+\subsection{Physics options }
+\begin{longtable}{|l|l|l|} \hline
+Option       & Description & Possible values \\ \hline
 {\tt ALBEDO} & Snow albedo
-&   0 - diagnostic temperature function \\
-& & 1 - prognostic age function         \\
-\hline
+&   1 - diagnostic temperature function \\
+& & 2 - prognostic age function         \\ \hline
 {\tt CANMOD} & Forest canopy
-&   0 - zero layer                      \\
-& & 1 - one layer                       \\
-\hline
+&   1 - one layer                       \\
+& & 2 - two layers                      \\ \hline
+{\tt CANRAD} & Canopy radiative properties
+&   1 - bulk canopy parameters          \\
+& & 2 - canopy element parameters       \\ \hline
 {\tt CONDCT} & Thermal conductivity of snow
 &   0 - fixed                           \\
-& & 1 - function of density             \\
-\hline
+& & 1 - function of density             \\ \hline
 {\tt DENSTY} & Snow density
 &   0 - fixed                           \\
 & & 1 - function of age                 \\
-& & 2 - function of overburden          \\
-\hline
+& & 2 - function of overburden          \\ \hline
 {\tt EXCHNG} & Surface-atmosphere exchange
 &   0 - fixed exchange coefficient      \\
-& & 1 - function of Richardson number   \\
-\hline
+& & 1 - Monin-Obukhov stability adjustment \\ \hline
 {\tt HYDROL} & Snow hydrology
 &   0 - free draining                   \\
-& & 1 - bucket                          \\ 
-\hline
+& & 1 - bucket model                    \\
+& & 2 - gravitational drainage          \\ \hline
 {\tt SNFRAC} & Snow cover fraction
-&   0 - $f_s = h/(h+h_f)$               \\
-& & 1 - $f_s = \tanh(h/h_f)$            \\ 
-\hline
+&   1 - linear function of snow depth      \\ 
+& & 2 - asymptotic function of snow depth  \\ \hline
+\end{longtable}
+
+\subsection{Output options }
+\begin{longtable}{|l|l|l|} \hline
+Option       & Description & Possible values \\ \hline
+{\tt PROFNC} & Output format
+&   0 - text output files               \\
+& & 1 - netCDF profile outputs          \\ \hline
 \end{longtable}
 
 \section{Running the model}
 
-FSM2 requires meteorological driving data and namelists to set options and parameters. The model is run with the commands {\tt ./FSM2 < nlst.txt} or {\tt FSM2.exe < nlst.txt}, where {\tt nlst.txt} is a text file containing eight namelists described in tables below. All of the namelists have to be present in the order of the tables, but any or all of the variables listed in a namelist can be omitted; defaults are then used.
+FSM2 requires meteorological driving data and namelists to set options and parameters. The model is run with the command {\tt ./FSM2 < nlst.txt}, where {\tt nlst.txt} is a text file containing six namelists described in tables below. All of the namelists have to be present in the order of the tables, but any or all of the variables listed in a namelist can be omitted; defaults are then used.
 
+\subsection{Parameters namelist {\tt \&params}}
 
-\subsection{Grid dimensions namelist {\tt \&gridpnts}}
-FSM2 can be run at a point, at a sequence of points, with a range of surface characteristics or on a rectangular grid by selecting values for dimensions {\tt Nx} and {\tt Ny}. 
+FSM2 parameters can be changed by editing the module {\tt PARAMETERS} in {\tt FSM2\_MODULES.F90} and recompiling the model with option {\tt SETPAR=0}, or parameters can be read from namelist {\tt \&params} when the model is run if {\tt SETPAR=1}. The parameters used depend on which options are selected and whether a forest canopy is specified.
 
-\begin{longtable}{|l|l|l|}
-\hline
-Variable & Default & Description \\
-\hline
-{\tt Nsmax}      & 3    & Maximum number of snow layers                       \\
-{\tt Nsoil}      & 4    & Number of soil layers                               \\
-{\tt Nx}         & 1    & Number of grid points in x direction or in sequence \\
-{\tt Ny}         & 1    & Number of grid points in y direction                \\
-{\tt ztop\_file} & none & DEM file name                                       \\
-\hline
+\begin{longtable}{|l|l|l|l|} \hline
+Snow parameters  & Default  & Description                             & Used by       \\ \hline
+{\tt asmn} & 0.5            & Minimum albedo for melting snow         &               \\
+{\tt asmx} & 0.85           & Maximum albedo for fresh snow           &               \\
+{\tt eta0} & $3.7\times10^7$ Pa s & Reference snow viscosity          &{\tt DENSTY=2} \\
+{\tt hfsn} & 0.1 m          & Snow cover fraction depth scale         &               \\
+{\tt kfix} & 0.24 W m$^{-1}$ K$^{-1}$ & Fixed thermal conductivity    &{\tt CONDCT=0} \\
+{\tt rcld} & 300 kg m$^{-3}$ & Maximum density for cold snow          &{\tt DENSTY=1} \\
+{\tt rfix} & 300 kg m$^{-3}$ & Fixed snow density                     &{\tt DENSTY=0} \\
+{\tt rgr0} & $5\times10^{-5}$ m & Fresh snow grain radius             &               \\
+{\tt rhof} & 100 kg m$^{-3}$ & Fresh snow density                     &{\tt DENSTY=1} \\
+{\tt rhow} & 300 kg m$^{-3}$ & Wind-packed snow density               &{\tt DENSTY=1,2} \\
+{\tt rmlt} & 500 kg m$^{-3}$ & Maximum density for melting snow       &{\tt DENSTY=1} \\
+{\tt Salb} & 10 kg m$^{-2}$ & Snowfall to refresh albedo              &{\tt ALBEDO=2} \\
+{\tt snda} & 2.8$\times10^{-6}$ s$^{-1}$ & Thermal metamorphism parameter &{\tt DENSTY=2} \\
+{\tt Talb} & -2$^\circ$C    & Snow albedo decay temperature threshold &{\tt ALBEDO=1} \\
+{\tt tcld} & 1000 h         & Cold snow albedo decay time scale       &{\tt ALBEDO=2} \\
+{\tt tmlt} & 100 h          & Melting snow albedo decay time scale    &{\tt ALBEDO=2} \\
+{\tt trho} & 200 h          & Snow compaction time scale              &{\tt DENSTY=1} \\ 
+{\tt Wirr} & 0.03           & Irreducible liquid water content of snow&{\tt HYDROL=1,2} \\
+{\tt z0sn} & 0.01 m         & Snow surface roughness length           &               \\ \hline 
 \end{longtable}
 
-A DEM file has to be specified if FSM2 is complied with {\tt DOWNSC=1}. Files in the \href{http://resources.esri.com/help/9.3/arcgisdesktop/com/gp_toolref/spatial_analyst_tools/esri_ascii_raster_format.htm}{ESRI ASCII raster format} ({\tt DEMHDR=1}) have six header lines with grid information, e.g.
-{\tt\begin{verbatim}
-ncols         1000
-nrows         1000
-xllcorner     215000
-yllcorner     770000
-cellsize      5
-NODATA_value  -9999
-\end{verbatim}}
-If provided, {\tt ncols} and {\tt nrows} overwrite {\tt Nx} and {\tt Ny} from {\tt \&gridpnts}.
+\begin{longtable}{|l|l|l|} \hline
+Vegetation parameters & Default       & Description                               \\ \hline
+{\tt acn0} & 0.1                      & Snow-free dense canopy albedo ({\tt CANRAD=1})     \\
+{\tt acns} & 0.4                      & Snow-covered dense canopy albedo ({\tt CANRAD=1})  \\  
+{\tt avg0} & 0.21                     & Canopy element reflectivity ({\tt CANRAD=2})       \\
+{\tt avgs} & 0.6                      & Canopy snow reflectivity ({\tt CANRAD=2})          \\  
+{\tt cvai} & $3.6\times 10^4$ J K$^{-1}$ m$^{-2}$ & Vegetation heat capacity per unit VAI  \\
+{\tt gsnf} & 0.01 m s$^{-1}$          & Snow-free vegetation moisture conductance \\
+{\tt hbas} & 2 m                      & Canopy base height                        \\
+{\tt kext} & 0.5                      & Canopy light extinction coefficient       \\
+{\tt rveg} & 20 s$^{1/2}$ m$^{-1/2}$  & Leaf boundary resistance                  \\
+{\tt svai} & 4.4 kg m$^{-2}$          & Intercepted snow capacity per unit VAI    \\
+{\tt tunl} & 240 h                    & Canopy snow unloading time scale          \\
+{\tt wcan} & 2.5                      & Canopy wind decay coefficient             \\ \hline
+\end{longtable}
 
-\subsection{Model levels namelist {\tt \&gridlevs}}
-Snow and soil layers are numbered and listed from the top downwards. If layer thicknesses are specified in {\tt \&gridlevs}, they must match the numbers of layers specified in {\tt \&gridpnts}.
+\begin{longtable}{|l|l|l|} \hline
+Soil parameters  & Default         & Description                             \\ \hline
+{\tt fcly}       & 0.3             & Soil clay fraction                      \\
+{\tt fsnd}       & 0.6             & Soil sand fraction                      \\
+{\tt gsat}       & 0.01 m s$^{-1}$ & Surface conductance for saturated soil  \\
+{\tt z0sf}       & 0.1 m           & Snow-free surface roughness length      \\ \hline 
+\end{longtable}
+
+\subsection{Grid dimensions namelist {\tt \&gridpnts}}
+FSM2 can be run at a point, at a sequence of points, with a range of surface characteristics or on a rectangular grid by selecting values for dimensions {\tt Ncols} and {\tt Nrows}. The numbers of snow and soil layers can be set, but the number of canopy layers ({\tt Ncnpy}) is determined by compiler option {\tt CANMOD}.
 
 \begin{longtable}{|l|l|l|}
 \hline
-Variable     & Default                     & Description           \\
+Variable & Default & Description \\ \hline
+{\tt Ncols}      & 1    & Number of columns in grid      \\
+{\tt Nrows}      & 1    & Number of rows in grid         \\
+{\tt Nsmax}      & 3    & Maximum number of snow layers  \\
+{\tt Nsoil}      & 4    & Number of soil layers          \\ \hline
+\end{longtable}
+
+\subsection{Grid levels namelist {\tt \&gridlevs}}
+Snow and soil layers are numbered from 1 at the top. If the thicknesses of the layers are changed, they have to match the numbers {\tt Nsmax} and {\tt Nsoil}. 
+
+\begin{longtable}{|l|l|l|}
 \hline
-{\tt Dzsnow} & 0.1, 0.2, snowdepth - 0.3 m & Snow layer thicknesses \\
-{\tt Dzsoil} & 0.1, 0.2, 0.4, 0.8 m        & Soil layer thicknesses \\
-\hline
+Variable & Default & Description \\ \hline
+{\tt Dzsnow}      & 0.1, 0.2, 0.4       & Minimum snow layer thicknesses (m)  \\
+{\tt Dzsoil}      & 0.1, 0.2, 0.4, 0.8  & Soil layer thicknesses (m)          \\ 
+{\tt fvg1}        & 0.5                 & Fraction of vegetation in upper layer ({\tt CANMOD=2}) \\
+{\tt zsub}        & 1.5 m               & Subcanopy wind speed diagnostic height  \\ \hline
 \end{longtable}
 
 \subsection{Driving data namelist {\tt \&drive} and driving data files}
 
-\begin{longtable}{|l|l|l|l|}
-\hline
-Variable        & Default & Description                               & Used by       \\
-\hline
-{\tt met\_file} & 'met'   & Driving data file name                    &               \\
-{\tt dt}        & 3600 s  & Timestep                                  &               \\
-{\tt zT}        & 2 m     & Temperature and humidity measurement height &             \\
-{\tt zU}        & 10 m    & Wind speed measurement height             &               \\
-{\tt lat}       &0$^\circ$& Latitude                                  &{\tt SWPART=1} \\
-{\tt noon}      & 12.00   & Time of solar noon                        &{\tt SWPART=1} \\
-{\tt Pscl}      & 0.35 km$^{-1}$  & Precipitation adjustment scale    &{\tt DOWNSC=1} \\
-{\tt Tlps}      & 6.5 K km$^{-1}$ & Temperature lapse rate            &{\tt DOWNSC=1} \\
-{\tt Tsnw}      & 2$^\circ$C      & Snow threshold temperature        &{\tt DOWNSC=1} \\
-{\tt zaws}      & 0 m     & Weather station elevation for downscaling &{\tt DOWNSC=1} \\
-\hline 
+\begin{longtable}{|l|l|l|l|} \hline
+Variable        & Default & Description                                 \\ \hline
+{\tt met\_file} & 'met'   & Driving data file name                      \\
+{\tt dt}        & 3600 s  & Timestep                                    \\
+{\tt zT}        & 2 m     & Temperature and humidity measurement height \\
+{\tt zU}        & 10 m    & Wind speed measurement height               \\
+{\tt lat}       &0$^\circ$& Latitude (for {\tt SWPART=1})               \\
+{\tt noon}      & 12.00   & Time of solar noon (for {\tt SWPART=1})     \\ \hline 
 \end{longtable}
 
 Measurement heights are specified above the ground if FSM2 is compiled with {\tt ZOFFST=0} and above the canopy top if {\tt ZOFFST=1} (required for driving with reanalyses). For simulations at a point or for a set of nearby points with common meteorology, 1D driving data are read from the named text file. Driving variables are arranged in columns of the file and rows correspond with timesteps.
 
-\begin{longtable}{|l|l|l|l|}
-\hline
-Variable    & Units    & Description                  & Used by \\
-\hline
-{\tt year}  & years    & Year                         &\\
-{\tt month} & months   & Month of the year            &\\
-{\tt day}   & days     & Day of the month             &\\
-{\tt hour}  & years    & Hour of the day              &\\
-{\tt LW} & W m$^{-2}$  & Incoming longwave radiation  &\\
-{\tt Ps} & Pa          & Surface air pressure         &\\
-{\tt Rf} & kg m$^{-2}$ s$^{-1}$ & Rainfall rate       &\\
-{\tt RH} & \%          & Relative humidity            &\\
-{\tt Sf} & kg m$^{-2}$ s$^{-1}$ & Snowfall rate       &\\
-{\tt Ta} & K           & Air temperature              &\\
-{\tt Ua} & m s$^{-1}$  & Wind speed                   &\\
-{\tt SW} & W m$^{-2}$  & Incoming shortwave radiation & {\tt DRIV1D=0,2}   \\
-{\tt Sdif} &W m$^{-2}$ & Diffuse shortwave radiation  & {\tt DRIV1D=1}     \\ 
-{\tt Sdir} &W m$^{-2}$ & Direct-beam shortwave radiation & {\tt DRIV1D=1}  \\ 
-%{\tt Udir} & $^\circ$  & Wind direction, clockwise from N & {\tt DRIV1D=1} \\
-{\tt Qa} & kg kg$^{-1}$& Specific humidity            & {\tt DRIV1D=2}     \\ 
-\hline 
+\begin{longtable}{|l|l|l|l|} \hline
+Variable    & Units    & Description                  \\ \hline
+{\tt year}  & years    & Year                         \\
+{\tt month} & months   & Month of the year            \\
+{\tt day}   & days     & Day of the month             \\
+{\tt hour}  & hours    & Hour of the day              \\
+{\tt LW} & W m$^{-2}$  & Incoming longwave radiation  \\
+{\tt Ps} & Pa          & Surface air pressure         \\
+{\tt Qa} & kg kg$^{-1}$& Specific humidity            \\
+{\tt Rf} & kg m$^{-2}$ s$^{-1}$ & Rainfall rate       \\
+{\tt RH} & \%          & Relative humidity            \\
+{\tt Sf} & kg m$^{-2}$ s$^{-1}$ & Snowfall rate       \\
+{\tt SW} & W m$^{-2}$  & Incoming shortwave radiation \\
+{\tt Ta} & K           & Air temperature              \\
+{\tt Ua} & m s$^{-1}$  & Wind speed                   \\ \hline 
 \end{longtable}
 
 The columns in a 1D driving data file are:
 
 \begin{tabular}{ll}
-{\obeyspaces\tt{year month day hour SW   LW   Sf Rf Ta RH Ua Ps}}    &for {\tt DRIV1D=0} \\
-{\tt year month day hour Sdif Sdir LW Sf Rf Ta RH Ua Ps}             &for {\tt DRIV1D=1} \\
-{\obeyspaces\tt{year month day hour SW   LW   Rf Sf Ta Qa RH Ua Ps}} &for {\tt DRIV1D=2} \\
+{\obeyspaces\tt{year month day hour SW LW Sf Rf Ta RH Ua Ps}}     &for {\tt DRIV1D=1} \\
+{\obeyspaces\tt{year month day hour SW LW Rf Sf Ta Qa RH Ua Ps}}  &for {\tt DRIV1D=2} \\
 \end{tabular}
 
-\subsection{Parameters namelist {\tt \&params}}
+\subsection{Vegetation characteristics namelist {\tt \&veg} and map files}
 
-The parameters used depend on which options are selected and whether a forest canopy is specified.
-
-\begin{longtable}{|l|l|l|l|}
-\hline
-Parameter & Default & Description & Used by \\
-\hline
-\hline \multicolumn{4}{|c|}{Snow albedo parameters} \\
-\hline 
-{\tt asmx} & 0.8            & Maximum albedo for fresh snow           &               \\
-{\tt asmn} & 0.5            & Minimum albedo for melting snow         &               \\
-{\tt hfsn} & 0.1 m          & Snow cover fraction depth scale         &               \\
-{\tt Talb} & -2$^\circ$C    & Snow albedo decay temperature threshold &{\tt ALBEDO=0} \\
-{\tt Salb} & 10 kg m$^{-2}$ & Snowfall to refresh albedo              &{\tt ALBEDO=1} \\
-{\tt tcld} & 1000 h         & Cold snow albedo decay time scale       &{\tt ALBEDO=1} \\
-{\tt tcld} & 100 h          & Melting snow albedo decay time scale    &{\tt ALBEDO=1} \\
-{\tt rgr0} & $5\times10^{-5}$ m & Fresh snow grain radius             &               \\
-\hline 
-\hline 
-\multicolumn{4}{|c|}{Snow thermal conductivity parameters} \\
-\hline 
-{\tt kfix} & 0.24 W m$^{-1}$ K$^{-1}$ & Fixed thermal conductivity    &{\tt CONDCT=0} \\
-{\tt bthr} & 2                        & Thermal conductivity exponent &{\tt CONDCT=1} \\
-\hline
-\hline
-\multicolumn{4}{|c|}{Snow density parameters} \\
-\hline 
-{\tt rho0} & 300 kg m$^{-3}$ & Fixed snow density                     &{\tt DENSTY=0}   \\
-{\tt rhof} & 100 kg m$^{-3}$ & Fresh snow density                     &{\tt DENSTY=1,2} \\
-{\tt rcld} & 300 kg m$^{-3}$ & Maximum density for cold snow          &{\tt DENSTY=1}   \\
-{\tt rmlt} & 500 kg m$^{-3}$ & Maximum density for melting snow       &{\tt DENSTY=1}   \\
-{\tt trho} & 200 h           & Snow compaction time scale             &{\tt DENSTY=1}   \\
-{\tt eta0} & $3.7 \times 10^7$ Pa s  & Reference snow viscosity       &{\tt DENSTY=2}   \\
-{\tt snda} & $2.8 \times 10^{-6}$ s$^{-1}$ & Thermal metamorphism parameter &{\tt DENSTY=2} \\
-\hline
-\hline 
-\multicolumn{4}{|c|}{Turbulent exchange parameters} \\
-\hline 
-{\tt z0sn} & 0.01 m          & Snow surface roughness length          &               \\
-{\tt bstb} & 5               & Atmospheric stability parameter        &{\tt EXCHNG=1} \\
-\hline
-\hline 
-\multicolumn{4}{|c|}{Snow hydraulics parameters}                                      \\
-\hline
-{\tt Wirr} & 0.03          & Irreducible liquid water content of snow &{\tt HYDROL=1} \\
-\hline
-\hline 
-\multicolumn{4}{|c|}{Soil parameters}                                                 \\
-\hline 
-{\tt gsat} & 0.01 m s$^{-1}$ & Surface conductance for saturated soil &               \\
-\hline 
-\hline 
-\multicolumn{4}{|c|}{Solver parameters}                                               \\
-\hline 
-{\tt Nitr} & 4      & Number of iterations in energy balance calculation &            \\
-\hline 
+\begin{longtable}{|l|l|l|} \hline
+Parameter   & Default         & Description                          \\ \hline
+{\tt alb0}  & 0.2             & Snow-free ground albedo              \\
+{\tt fsky}  & 1               & Sky view fraction for remote shading \\
+{\tt vegh}  & 0               & Canopy height (m)                    \\
+{\tt VAI}   & 0               & Vegetation area index                \\ \hline 
 \end{longtable}
 
-\begin{longtable}{|l|l|l|}
-\hline
-\multicolumn{3}{|c|}{Canopy parameters} \\
-\hline
-Parameter & Default & Description \\
-\hline
-{\tt avg0} & 0.1             & Snow-free vegetation albedo                  \\
-{\tt avgs} & 0.4             & Snow-covered vegetation albedo               \\ 
-{\tt cden} & 0.004           & Dense canopy turbulent transfer coefficient  \\
-{\tt cvai} & 4.4 kg m$^{-2}$ & Canopy snow capacity per unit VAI            \\
-{\tt cveg} & 20              & Vegetation turbulent transfer coefficient    \\
-{\tt Gcn1} & 0.5             & Leaf angle distribution parameter            \\
-{\tt Gcn2} & 0               & Leaf angle distribution parameter            \\
-{\tt gsnf} & 0 m s$^{-1}$    & Snow-free vegetation moisture conductance    \\
-{\tt kdif} & 0.5             & Diffuse radiation extinction coefficient     \\
-{\tt kveg} & 1.0             & Canopy cover coefficient                     \\
-{\tt rchd} & 0.67            & Displacement height to canopy height ratio   \\
-{\tt rchz} & 0.1             & Roughness length to canopy height ratio      \\
-{\tt tcnc} & 240 h           & Canopy unloading time scale for cold snow    \\
-{\tt tcnm} & 2.4 h           & Canopy unloading time scale for melting snow \\
-\hline 
-\end{longtable}
-
-\subsection{Site characteristics namelist {\tt \&maps} and map files}
-
-\begin{longtable}{|l|l|l|}
-\hline
-Parameter & Default & Description \\
-\hline
-{\tt alb0}  & 0.2             & Snow-free ground albedo                    \\
-{\tt canh}  & 2500 {\tt VAI}  & Canopy heat capacity (J K$^{-1}$ m$^{-2}$) \\
-{\tt fcly}  & 0.3             & Soil clay fraction                         \\
-{\tt fsnd}  & 0.6             & Soil sand fraction                         \\
-{\tt fsky}  & 1               & Sky view fraction                          \\
-{\tt fveg}  & {\tt 1 - exp(-kveg VAI)}  & Canopy cover fraction            \\
-{\tt hcan}  & 0               & Canopy height (m)                          \\
-{\tt trcn}  & {\tt exp(-kdif VAI)}  & Canopy transmissivity                \\
-{\tt VAI}   & 0               & Vegetation area index                      \\
-{\tt z0sf}  & 0.1             & Snow-free ground roughness length          \\
-\hline 
-\end{longtable}
-
-Site characteristics can either be left as default values, set to a sequence of {\tt Nx$\times$Ny} values in the namelist or read from a named map file. e.g. for a simulation with 10 points, the snow-free ground albedo can be reset to a constant value of 0.1 in {\tt \&maps} by including
+Site characteristics can either be left as default values, set to a sequence of {\tt Ncols$\times$Nrows} values in the namelist or read from a named map file. e.g. for a simulation with 10 points, the snow-free ground albedo can be reset to a constant value of 0.1 in {\tt \&veg} by including
 
 {\tt alb0 = 10*0.1}
 
@@ -294,37 +218,33 @@ Sky view can be set independently of vegetation cover to allow for grid cells sh
 
 \subsection{Initial values namelist {\tt \&initial} and start files}
 
-\begin{longtable}{|l|l|l|}
-\hline
-Variable & Default & Description \\
-\hline
-{\tt start\_file}  & {\tt 'none'}  & Start file name                                      \\
-{\tt fsat}  & 4*0.5  & Initial moisture content of soil layers as fractions of saturation \\
-{\tt Tsoil} & 4*285  & Initial temperature of soil layers                                 \\
-
-\hline 
+\begin{longtable}{|l|l|l|} \hline
+Variable          & Default      & Description                                              \\ \hline
+{\tt start\_file} & {\tt 'none'} & Start file name                                          \\
+{\tt fsat}        & 4*0.5        & Initial soil moisture profile as fractions of saturation \\
+{\tt Tprf}        & 4*285        & Initial soil temperature profile                         \\ \hline 
 \end{longtable}
 
-Soil temperature and moisture content are taken from the namelist and FSM2 is initialized in a snow-free state by default. If a start file is named, it should be a text file containing initial values for each of the state variables in order:
+Soil temperature and moisture content are taken from the namelist and FSM2 is initialized in a snow-free state by default if there is no start file. If a start file is named, it should be a text file containing initial values for each of the state variables in order:
 
 \begin{longtable}{|l|l|l|}
 \hline
 Variable & Units & Description \\
 \hline
-{\tt albs(Nx,Ny)}        & -            & Albedo of snow                             \\
-{\tt Ds(Nsmax,Nx,Ny)}    & m            & Thickness of snow layers                   \\
-{\tt Nsnow(Nx,Ny)}       & -            & Number of snow layers                      \\
-{\tt Qcan(Nx,Ny)}        & kg kg$^{-1}$ & Canopy air space specific humidity         \\
-{\tt rgrn(Nsmax,Nx,Ny)}  & m            & Snow grain radii in layers                 \\
-{\tt Sice(Nsmax,Nx,Ny)}  & kg m$^{-2}$  & Ice content of snow layers                 \\
-{\tt Sliq(Nsmax,Nx,Ny)}  & kg m$^{-2}$  & Liquid content of snow layers              \\
-{\tt Sveg(Nx,Ny)}        & W m$^{-2}$   & Snow mass on vegetation                    \\
-{\tt Tcan(Nx,Ny)}        & K            & Canopy air space temperature               \\
-{\tt theta(Nsoil,Nx,Ny)} & -            & Volumetric moisture content of soil layers \\
-{\tt Tsnow(Nsmax,Nx,Ny)} & K            & Temperature of snow layers                 \\
-{\tt Tsoil(Nsoil,Nx,Ny)} & K            & Temperature of soil layers                 \\
-{\tt Tsrf(Nx,Ny)}        & K            & Surface skin temperature                   \\
-{\tt Tveg(Nx,Ny)}        & K            & Vegetation temperature                     \\
+{\tt albs(Nrows,Ncols)}        & -            & Albedo of snow                             \\
+{\tt Dsnw(Nsmax,Nrows,Ncols)}  & m            & Thickness of snow layers                   \\
+{\tt Nsnow(Nrows,Ncols)}       & -            & Number of snow layers                      \\
+{\tt Qcan(Ncnpy,Nrows,Ncols)}  & kg kg$^{-1}$ & Canopy air space specific humidities       \\
+{\tt Rgrn(Nsmax,Nrows,Ncols)}  & m            & Snow grain radii in layers                 \\
+{\tt Sice(Nsmax,Nrows,Ncols)}  & kg m$^{-2}$  & Ice content of snow layers                 \\
+{\tt Sliq(Nsmax,Nrows,Ncols)}  & kg m$^{-2}$  & Liquid content of snow layers              \\
+{\tt Sveg(Ncnpy,Nrows,Ncols)}  & W m$^{-2}$   & Snow mass on canopy layers                 \\
+{\tt Tcan(Ncnpy,Nrows,Ncols)}  & K            & Canopy air space temperatures              \\
+{\tt Tsnow(Nsmax,Nrows,Ncols)} & K            & Snow layer temperatures                    \\
+{\tt Tsoil(Nsoil,Nrows,Ncols)} & K            & Soil layer temperatures                    \\
+{\tt Tsrf(Nrows,Ncols)}        & K            & Ground or snow surface temperature         \\
+{\tt Tveg(Ncnpy,Nrows,Ncols)}  & K            & Canopy layer temperatures                  \\
+{\tt Vsmc(Nsoil,Nrows,Ncols)}  & -            & Volumetric moisture content of soil layers \\
 \hline 
 \end{longtable}
 
@@ -334,76 +254,83 @@ The easiest way to generate a start file is to spin up the model by running it f
 
 \begin{longtable}{|l|l|l|}
 \hline
-Variable & Default & Description \\
-\hline
-{\tt Nave}       & 24           & Number of timesteps in averaged outputs       \\
-{\tt Nsmp}       & 12           & Timestep of sample outputs, $\leq$ {\tt Nave} \\
-{\tt runid}      & none         & Run identifier string                         \\
-{\tt dump\_file} & {\tt 'dump'} & Dump file name                                \\
-\hline 
+Variable         & Default      & Description                            \\ \hline
+{\tt runid}      & none         & Run identifier string                  \\
+{\tt dump\_file} & {\tt 'dump'} & Dump file name                         \\ \hline 
 \end{longtable}
 
-A run identifier, if specified, is prefixed on all output file names. If the run identifier includes a directory name (e.g. {\tt runid = 'output/'}), the directory has to exist before the model is run. A metadata file {\tt runid+'runifo'} containing copies of all the namelists and compilation options is written at the start of a run, and the state variables are written to a dump file {\tt runid+dump\_file} with the same format as the start file at the end of a run. There are two options for plain text outputs
+A run identifier, if specified, is prefixed on all output file names. If the run identifier includes a directory name (e.g. {\tt runid = 'output/'}), the directory has to exist before the model is run. State variables are written at the end of a run to a dump file {\tt runid+dump\_file} with the same format as the start file. A state file {\tt runid+'state'} and a flux file {\tt runid+'flux'} are written to every timestep, and a subcanopy diagnostics file {\tt runid+'subc'} is written to if there are any points with VAI $>$ 0.
 
-Flux variable are averaged over {\tt Nave} timesteps and written to file {\tt runid+'ave'}, and state variables are written to file {\tt runid+'smp'} at timestep number {\tt Nsmp} during every averaging period. For the default output frequencies, daily averages and samples at noon will be produced if the driving data has a one-hour timestep and starts at 01:00. Full timeseries are written if {\tt Nave=1} and {\tt Nsmp=1}. 
-
-The sample file has 4 + 6$\times${\tt Nx$\times$Ny} columns:
-
-\begin{longtable}{|l|l|l|}
-\hline
-Variable & Units & Description \\
-\hline
-{\tt year}        & years       & Year                     \\
-{\tt month}       & months      & Month of the year        \\
-{\tt day}         & days        & Day of the month         \\
-{\tt hour}        & hours       & Hour of the day          \\
-{\tt snd(Nx*Ny)}  & m           & Snow depth               \\
-{\tt SWE(Nx*Ny)}  & kg m$^{-2}$ & Snow water equivalent    \\
-{\tt Sveg(Nx*Ny)} & kg m$^{-2}$ & Snow mass on vegetation  \\
-{\tt Tsrf(Nx*Ny)} & K           & Surface temperature      \\
-{\tt Tsoil(Nx*Ny)}& K           & Level 2 soil temperature \\
-{\tt Tveg(Nx*Ny)} & K           & Vegetation temperature   \\
-\hline 
+The state file has 4 + {\tt Nrows$\times$Ncols}$\times$(4 + {\tt Ncnpy} +{\tt Nsoil}) columns:
+\begin{longtable}{|l|l|l|} \hline
+Variable                       & Units       & Description                   \\ \hline
+{\tt year}                     & years       & Year                          \\
+{\tt month}                    & months      & Month of the year             \\
+{\tt day}                      & days        & Day of the month              \\
+{\tt hour}                     & hours       & Hour of the day               \\
+{\tt snd(Nrows*Ncols)}         & m           & Snow depth                    \\
+{\tt SWE(Nrows*Ncols)}         & kg m$^{-2}$ & Snow water equivalent         \\
+{\tt Sveg(Nrows*Ncols)}        & kg m$^{-2}$ & Snow mass on vegetation       \\
+{\tt Tsoil(Nrows*Ncols*Nsoil)} & K           & Soil layer temperatures       \\
+{\tt Tsrf(Nrows*Ncols)}        & K           & Surface temperature           \\
+{\tt Tveg(Nrows*Ncols*Ncnpy)}  & K           & Vegetation layer temperatures \\ \hline 
 \end{longtable}
 
-The average file has 4 + 11$\times${\tt Nx$\times$Ny} columns:
-
-\begin{longtable}{|l|l|l|}
-\hline
-Variable & Units & Description \\
-\hline
-{\tt year}        & years       & Year                                 \\
-{\tt month}       & months      & Month of the year                    \\
-{\tt day}         & days        & Day of the month                     \\
-{\tt hour}        & hours       & Hour of the day                      \\
-{\tt alb(Nx*Ny)}  & -           & Flux-weighted albedo                 \\
-{\tt G(Nx*Ny)}    & W m$^{-2}$  & Ground heat flux                     \\
-{\tt Gsoil(Nx*Ny)}& W m$^{-2}$  & Heat flux into soil                  \\
-{\tt H(Nx*Ny)}    & W m$^{-2}$  & Sensible heat flux to the atmosphere \\
-{\tt Hsrf(Nx*Ny)} & W m$^{-2}$  & Sensible heat flux from the surface  \\
-{\tt LE(Nx*Ny)}   & W m$^{-2}$  & Latent heat flux to the atmosphere   \\
-{\tt LEsrf(Nx*Ny)}& W m$^{-2}$  & Latent heat flux from the surface    \\
-{\tt Melt(Nx*Ny)} & kg m$^{-2}$ & Cumulated melt                       \\
-{\tt Rnet(Nx*Ny)} & W m$^{-2}$  & Net radiation                        \\
-{\tt Roff(Nx*Ny)} & kg m$^{-2}$ & Cumulated runoff                     \\
-{\tt Rsrf(Nx*Ny)} & W m$^{-2}$  & Net radiation absorbed by the surface\\
-\hline 
+The flux file has 4 + 7$\times${\tt Nrows$\times$Ncols} columns:
+\begin{longtable}{|l|l|l|} \hline
+Variable                 & Units       & Description                          \\ \hline
+{\tt year}               & years       & Year                                 \\
+{\tt month}              & months      & Month of the year                    \\
+{\tt day}                & days        & Day of the month                     \\
+{\tt hour}               & hours       & Hour of the day                      \\
+{\tt H(Nrows*Ncols)}     & W m$^{-2}$  & Sensible heat flux to the atmosphere \\
+{\tt LE(Nrows*Ncols)}    & W m$^{-2}$  & Latent heat flux to the atmosphere   \\
+{\tt LWout(Nrows*Ncols)} & W m$^{-2}$  & Outgoing LW radiation                \\
+{\tt Melt(Nrows*Ncols)}  & kg m$^{-2}$ s$^{-1}$ & Surface melt                \\
+{\tt Roff(Nrows*Ncols)}  & kg m$^{-2}$ s$^{-1}$ & Runoff at base of snow      \\
+{\tt Subl(Nrows*Ncols)}  & kg m$^{-2}$ s$^{-1}$ & Sublimation rate            \\
+{\tt SWout(Nrows*Ncols)} & W m$^{-2}$  & Outgoing SW radiation                \\ \hline 
 \end{longtable}
 
-For simulations at a single point ({\tt Nx=Ny=1}) vertical profiles of snow and soil state variables are written to file {\tt runid+'prf'}. For each timestep in the profile output file, there is a line
+The subcanopy file has 4 + 3$\times${\tt Nrows$\times$Ncols} columns:
+\begin{longtable}{|l|l|l|} \hline
+Variable                 & Units       & Description                          \\ \hline
+{\tt year}               & years       & Year                                 \\
+{\tt month}              & months      & Month of the year                    \\
+{\tt day}                & days        & Day of the month                     \\
+{\tt hour}               & hours       & Hour of the day                      \\
+{\tt LWsub(Nrows*Ncols)} & W m$^{-2}$  & Subcanopy downward LW radiation      \\
+{\tt SWsub(Nrows*Ncols)} & W m$^{-2}$  & Subcanopy downward SW radiation      \\
+{\tt Usub(Nrows*Ncols)}  & m s$^{-1}$  & Subcanopy wind speed                 \\ \hline 
+\end{longtable}
 
-\hskip20pt{\tt year month day hour Nsnow Nsoil}
+\subsection{NetCDF output}
 
-followed by {\tt Nsnow} lines
+Outputs are written to netCDF file {\tt runid+FSM2out.nc} if the model is compiled with {\tt PROFNC = 1} (currently only available for point runs).
 
-\hskip20pt{\tt zl Ds rgrain Sice Sliq Tsnow}
-
-and then {\tt Nsoil} lines
-
-\hskip20pt{\tt zl Dzsoil theta Tsoil},
-
-where {\tt zl} is the height of the middle of a layer above the ground (negative for soil layers).
-
+\begin{longtable}{|l|l|l|l|} \hline
+Variable      & Units       & Dimensions          & Description                           \\ \hline
+{\tt Dzsoil}  & m           & {\tt Nsoil}         & Soil layer thicknesses                \\
+{\tt hfls}    & W m$^{-2}$  & {\tt Ntime}         & Surface upward latent heat flux       \\
+{\tt hfss}    & W m$^{-2}$  & {\tt Ntime}         & Surface upward sensible heat flux     \\
+{\tt rlus}    & W m$^{-2}$  & {\tt Ntime}         & Surface upwelling longwave radiation  \\
+{\tt rsus}    & W m$^{-2}$  & {\tt Ntime}         & Surface upwelling shortwave radiation \\
+{\tt snd}     & m           & {\tt Ntime}         & Snow depth                            \\
+{\tt snm}     & kg m$^{-2}$ s$^{-1}$  & {\tt Ntime}  & Surface snow melt                  \\
+{\tt snmsl}   & kg m$^{-2}$ s$^{-1}$  & {\tt Ntime}  & Water flowing out of snowpack      \\
+{\tt snw}     & kg m$^{-2}$ & {\tt Ntime}         & Surface snow mass                     \\
+{\tt time}    & hours       & {\tt Ntime}         & Hours since start of run              \\
+{\tt tsl}     & K           & {\tt Ntime}         & Surface temperature                   \\
+{\tt Dnsw}    & m           & {\tt Ntime, Nsmax}  & Thicknesses of snow layers            \\
+{\tt lqsn}    &             & {\tt Ntime, Nsmax}  & Mass fraction of liquid water in snow layers  \\
+{\tt rgrn}    & m           & {\tt Ntime, Nsmax}  & Thicknesses of snow layers            \\
+{\tt snowrho} & kg m$^{-3}$ & {\tt Ntime, Nsmax}  & Grain radius in snow layers           \\
+{\tt tsl}     & K           & {\tt Ntime, Nsoil}  & Temperatures of soil layers           \\
+{\tt tsnl}    & K           & {\tt Ntime, Nsmax}  & Temperatures of snow layers           \\
+{\tt Dnsw}    & m           & {\tt Ntime, Nsmax}  & Thicknesses of snow layers            \\
+{\tt wflx}    & kg m$^{-2}$ s$^{-1}$  & {\tt Ntime, Nsmax}  & Water flux into snow layers \\
+\hline 
+\end{longtable}
 
 \end{document}
 

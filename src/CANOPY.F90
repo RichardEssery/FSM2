@@ -1,74 +1,49 @@
 !-----------------------------------------------------------------------
-! Mass baance of canopy snow
+! Properties of vegetation canopy layers
 !-----------------------------------------------------------------------
-subroutine CANOPY(Eveg,unload)
+subroutine CANOPY(Ntyp,Sveg,Tveg,VAI,cveg,fcans,lveg,Scap,Tveg0)
 
 #include "OPTS.h"
 
 use CONSTANTS, only: &
-  Tm                  ! Melting point (K)
+  hcap_ice            ! Specific heat capacity of ice (J/K/kg)
 
-use DRIVING, only: &
-  dt,                &! Timestep (s)
-  Sf                  ! Snowfall rate (kg/m2/s)
-
-use GRID, only: &
-  Nx,Ny               ! Grid dimensions
+use LAYERS, only: &
+  Ncnpy,             &! Number of canopy layers
+  fvg1                ! Fraction of vegetation in upper canopy layer
 
 use PARAMETERS, only: &
-  tcnc,              &! Canopy unloading time scale for cold snow (s)
-  tcnm                ! Canopy unloading time scale for melting snow (s)
-
-use PARAMMAPS, only: &
-  fveg,              &! Canopy cover fraction
-  scap                ! Canopy snow capacity (kg/m^2)
-
-use STATE_VARIABLES, only: &
-  Sveg,              &! Canopy snow mass (kg/m^2)
-  Tveg                ! Vegetation temperature (K)
+  cvai,              &! Vegetation heat capacity per unit VAI (J/K/m^2)
+  svai                ! Intercepted snow capacity per unit VAI (kg/m^2)
 
 implicit none
 
+integer, intent(in) :: &
+  Ntyp                ! Vegetation type
+
 real, intent(in) :: &
-  Eveg(Nx,Ny)         ! Moisture flux from vegetation (kg/m^2/s)
+  Sveg(Ncnpy),       &! Snow mass on vegetation layers (kg/m^2)
+  Tveg(Ncnpy),       &! Vegetation layer temperatures (K)
+  VAI                 ! Vegetation area index
 
 real, intent(out) :: &
-  unload(Nx,Ny)       ! Snow mass unloaded from canopy (kg/m^2)
+  cveg(Ncnpy),       &! Vegetation heat capacities (J/K/m^2)
+  fcans(Ncnpy),      &! Canopy layer snowcover fractions
+  lveg(Ncnpy),       &! Canopy layer vegetation area indices
+  Scap(Ncnpy),       &! Canopy layer snow capacities (kg/m^2)
+  Tveg0(Ncnpy)        ! Vegetation temperatures at start of timestep (K)
 
-real :: &
-  intcpt,            &! Canopy interception (kg/m^2)
-  Evegs,             &! Canopy snow sublimation rate (kg/m^2/s)
-  tunl                ! Canopy snow unloading timescale (s)
-
-integer :: & 
-  i,j                 ! Grid coordinates
-
-do j = 1, Ny
-do i = 1, Nx
-  unload(i,j) = 0
-  if (fveg(i,j) > 0) then
-
-  ! interception
-    intcpt = (scap(i,j) - Sveg(i,j))*(1 - exp(-fveg(i,j)*Sf(i,j)*dt/scap(i,j)))
-    Sveg(i,j) = Sveg(i,j) + intcpt
-    Sf(i,j) = Sf(i,j) - intcpt/dt
-
-  ! sublimation
-    Evegs = 0
-    if (Sveg(i,j) > 0 .or. Tveg(i,j) < Tm) Evegs = Eveg(i,j)
-    Sveg(i,j) = Sveg(i,j) - Evegs*dt
-    Sveg(i,j) = max(Sveg(i,j), 0.)
-
-  ! unloading
-    tunl = tcnc
-    if (Tveg(i,j) >= Tm) tunl = tcnm
-    tunl = max(tunl, dt)
-    unload(i,j) = Sveg(i,j)*dt/tunl
-    Sveg(i,j) = Sveg(i,j) - unload(i,j)
-
-  end if
-end do
-end do
+#if CANMOD == 1
+lveg(1) = VAI
+#endif
+#if CANMOD == 2
+lveg(1) = fvg1*VAI
+lveg(2) = (1 - fvg1)*VAI
+#endif
+cveg(:) = cvai(Ntyp)*lveg(:) + hcap_ice*Sveg(:)
+Scap = svai(Ntyp)*lveg(:)
+fcans(:) = 0
+if (VAI > epsilon(VAI)) fcans(:) = (Sveg(:)/Scap(:))**0.67
+Tveg0 = Tveg
 
 end subroutine CANOPY
-

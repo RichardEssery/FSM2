@@ -1,5 +1,5 @@
 !-----------------------------------------------------------------------
-! Solve matrix equation by LU decomposition
+! Solve matrix equation Ax = b for x by LU decomposition
 !-----------------------------------------------------------------------
 subroutine LUDCMP(N,A,b,x)
 
@@ -10,7 +10,7 @@ integer, intent(in) :: &
 
 real, intent(in) :: &
  A(N,N),            & ! Matrix
- b(N)                 ! RHS of matrix equation &
+ b(N)                 ! RHS of matrix equation
 
 real, intent(out) :: &
  x(N)                 ! Solution of matrix equation
@@ -95,4 +95,3 @@ do i = N, 1, -1
 end do
     
 end subroutine LUDCMP
-

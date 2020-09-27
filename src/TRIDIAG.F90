@@ -21,19 +21,19 @@ real, intent(out) :: &
 integer :: n          ! Loop counter 
 
 ! Work space   
-real :: beta, gamma(Nvec) 
+real :: beta, g(Nvec) 
 
 beta = b(1)
 x(1) = r(1) / beta
 
 do n = 2, Nvec
-  gamma(n) = c(n-1) / beta
-  beta = b(n) - a(n)*gamma(n)
+  g(n) = c(n-1) / beta
+  beta = b(n) - a(n)*g(n)
   x(n) = (r(n) - a(n)*x(n-1)) / beta
 end do
 
 do n = Nvec - 1, 1, -1
-  x(n) = x(n) - gamma(n+1)*x(n+1)
+  x(n) = x(n) - g(n+1)*x(n+1)
 end do
-  
+
 end subroutine TRIDIAG

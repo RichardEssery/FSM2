@@ -665,6 +665,19 @@ where $I_0$ = 1367 Wm$^{-2}$ is the solar constant. The diffuse fraction is then
 \end{equation}
 Direct radiation is the remainder $S_{\rm dir} = S_0 - S_{\rm dif}$.
 
+If a digital elevation model is provided as an input, the array of elevations is assumed to follow the convention that the first row is at the north of the model domain and the first column is at the west. 
+\begin{equation}
+\tan^{-1}\left[\sqrt{\left(\frac{dz}{dx}\right)^2 + \left(\frac{dz}{dy}^2\right)}\right]
+\end{equation}
+\begin{equation}
+- \tan^{-1}\left(\frac{dz}{dy}\middle/\frac{dz}{dx}\right) - \frac{\pi}{2}
+\end{equation}
+Aspect is calculated to follow the same convention as solar azimuth and the Fortran {\tt atan2} function is used to obtain the correct quadrant. Grid cells are indexed by row number $i$ from north to south and column number $j$ from west to east. The surface gradient is calculated by centred differences
+\begin{equation}
+\left(\frac{dz}{dx},\frac{dz}{dy}\right)_{ij} = 
+\left(\frac{z_{i,j+1} - z_{i,j-1}}{2\Delta x}, \frac{z_{i+1,j} - z_{i-1,j}}{2\Delta x}\right)
+\end{equation}
+for grid spacing $\Delta x$.
 
 \end{document}
 

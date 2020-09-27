@@ -1,5 +1,7 @@
+&params
+/
 &gridpnts
-  Nx = 2
+  Ncols = 2
 /
 &gridlevs
 /
@@ -10,10 +12,8 @@
   lat = 67.37
   noon = 10
 /
-&params
-/
-&maps
-  hcan = 0, 15
+&veg
+  vegh = 0, 15
   VAI =  0, 2
 /
 &initial
