@@ -133,8 +133,6 @@ real, allocatable :: &
   fsky(:,:),         &! Skyview not obstructed by remote vegetation
   vegh(:,:),         &! Canopy height (m)
   VAI(:,:)            ! Vegetation area index
-integer :: &
-  Ntyp                ! Vegetation type
 
 ! Start and dump file names
 character(len=70) :: &
@@ -233,7 +231,14 @@ if (alb0_file /= 'none') call FSM2_MAP(alb0_file,Ncols,Nrows,alb0)
 if (fsky_file /= 'none') call FSM2_MAP(fsky_file,Ncols,Nrows,fsky)
 if (vegh_file /= 'none') call FSM2_MAP(vegh_file,Ncols,Nrows,vegh)
 if (VAI_file  /= 'none') call FSM2_MAP(VAI_file,Ncols,Nrows,VAI)
-Ntyp = 1
+
+! Soil properties
+b = 3.1 + 15.7*fcly - 0.3*fsnd
+hcap_soil = (2.128*fcly + 2.385*fsnd)*1e6 / (fcly + fsnd)
+sathh = 10**(0.17 - 0.63*fcly - 1.58*fsnd)
+Vsat = 0.505 - 0.037*fcly - 0.142*fsnd
+Vcrit = Vsat*(sathh/3.364)**(1/b)
+hcon_soil = (hcon_air**Vsat) * ((hcon_clay**fcly)*(hcon_sand**(1 - fcly))**(1 - Vsat))
 
 ! Allocate state variable arrays
 allocate(albs(Ncols,Nrows))
@@ -268,14 +273,6 @@ do k = 1, Ncnpy
   where(VAI==0) Sveg(k,:,:) = -999./Ncnpy
   where(VAI==0) Tveg(k,:,:) = -999
 end do
-
-! Soil properties
-b = 3.1 + 15.7*fcly - 0.3*fsnd
-hcap_soil = (2.128*fcly + 2.385*fsnd)*1e6 / (fcly + fsnd)
-sathh = 10**(0.17 - 0.63*fcly - 1.58*fsnd)
-Vsat = 0.505 - 0.037*fcly - 0.142*fsnd
-Vcrit = Vsat*(sathh/3.364)**(1/b)
-hcon_soil = (hcon_air**Vsat) * ((hcon_clay**fcly)*(hcon_sand**(1 - fcly))**(1 - Vsat))
 
 ! Initial soil profiles from namelist
 allocate(fsat(Nsoil))
@@ -355,7 +352,7 @@ do
                        Rf(j,i),Sdif(j,i),Sdir(j,i),Sf(j,i),            &
                        Ta(j,i),trans(j,i),Ua(j,i),                     &
                        ! Vegetation characteristics                    &
-                       Ntyp,alb0(j,i),vegh(j,i),VAI(j,i),              &
+                       alb0(j,i),vegh(j,i),VAI(j,i),                   &
                        ! State variables                               &
                        albs(j,i),Tsrf(j,i),Dsnw(:,j,i),Nsnow(j,i),     &
                        Qcan(:,j,i),Rgrn(:,j,i),Sice(:,j,i),            &

@@ -65,23 +65,20 @@ end module LAYERS
 !-----------------------------------------------------------------------
 module PARAMETERS
 
-integer, parameter :: &
-  Nveg = 1            ! Number of vegetation types
-
 #if SETPAR == 1
 ! Vegetation parameters
 real :: &
-  acn0(Nveg),        &! Snow-free dense canopy albedo
-  acns(Nveg),        &! Snow-covered dense canopy albedo
-  avg0(Nveg),        &! Canopy element reflectivity
-  avgs(Nveg),        &! Canopy snow reflectivity
-  cvai(Nveg),        &! Vegetation heat capacity per unit VAI (J/K/m^2)
-  gsnf(Nveg),        &! Snow-free vegetation moisture conductance (m/s)
-  kext(Nveg),        &! Vegetation light extinction coefficient
-  leaf(Nveg),        &! Leaf boundary resistance (s/m)^(1/2)
-  svai(Nveg),        &! Intercepted snow capacity per unit VAI (kg/m^2)
-  tunl(Nveg),        &! Canopy snow unloading time scale (s)
+  acn0,              &! Snow-free dense canopy albedo
+  acns,              &! Snow-covered dense canopy albedo
+  avg0,              &! Canopy element reflectivity
+  avgs,              &! Canopy snow reflectivity
+  cvai,              &! Vegetation heat capacity per unit VAI (J/K/m^2)
+  gsnf,              &! Snow-free vegetation moisture conductance (m/s)
   hbas,              &! Canopy base height (m)
+  kext,              &! Vegetation light extinction coefficient
+  leaf,              &! Leaf boundary resistance (s/m)^(1/2)
+  svai,              &! Intercepted snow capacity per unit VAI (kg/m^2)
+  tunl,              &! Canopy snow unloading time scale (s)
   wcan                ! Canopy wind decay coefficient
 
 ! Snow parameters
@@ -116,18 +113,18 @@ real :: &
 #else
 ! Vegetation parameters
 real, parameter :: &
-  acn0(Nveg) = [0.1],  &! Snow-free dense canopy albedo
-  acns(Nveg) = [0.4],  &! Snow-covered dense canopy albedo
-  avg0(Nveg) = [0.21], &! Canopy element reflectivity
-  avgs(Nveg) = [0.6],  &! Canopy snow reflectivity
-  cvai(Nveg) = [3.6e4],&! Vegetation heat capacity per unit VAI (J/K/m^2)
-  gsnf(Nveg) = [0.01], &! Snow-free vegetation moisture conductance (m/s)
-  kext(Nveg) = [0.5],  &! Vegetation light extinction coefficient
-  leaf(Nveg) = [20],   &! Leaf boundary resistance (s/m)^(1/2)
-  svai(Nveg) = [4.4],  &! Intercepted snow capacity per unit VAI (kg/m^2)
-  tunl(Nveg) = [240*3600],  &! Canopy snow unloading time scale (s)
-  hbas = 2,            &! Canopy base height (m)
-  wcan = 2.5            ! Canopy wind decay coefficient
+  acn0 = 0.1,        &! Snow-free dense canopy albedo
+  acns = 0.4,        &! Snow-covered dense canopy albedo
+  avg0 = 0.21,       &! Canopy element reflectivity
+  avgs = 0.6,        &! Canopy snow reflectivity
+  cvai = 3.6e4,      &! Vegetation heat capacity per unit VAI (J/K/m^2)
+  gsnf = 0.01,       &! Snow-free vegetation moisture conductance (m/s)
+  hbas = 2,          &! Canopy base height (m)
+  kext = 0.5,        &! Vegetation light extinction coefficient
+  leaf = 20,         &! Leaf boundary resistance (s/m)^(1/2)
+  svai = 4.4,        &! Intercepted snow capacity per unit VAI (kg/m^2)
+  tunl = 240*3600,   &! Canopy snow unloading time scale (s)
+  wcan = 2.5          ! Canopy wind decay coefficient
 
 ! Snow parameters
 real, parameter :: &

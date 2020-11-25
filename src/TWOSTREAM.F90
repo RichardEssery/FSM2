@@ -1,16 +1,13 @@
 !-----------------------------------------------------------------------
 ! Two-stream reflectance and transmittance of a canopy layer
 !-----------------------------------------------------------------------
-subroutine TWOSTREAM(Ntyp,elev,fcans,lveg,rdif,rdir,tdif,tdir)
+subroutine TWOSTREAM(elev,fcans,lveg,rdif,rdir,tdif,tdir)
 
 use PARAMETERS, only: &
   avg0,              &! Canopy element reflectivity
   avgs                ! Canopy snow reflectivity
 
 implicit none
-
-integer, intent(in) :: &
-  Ntyp                ! Vegetation type
 
 real, intent(in) :: &
   elev,              &! Solar elevation (radians)
@@ -36,7 +33,7 @@ real :: &
   omega,             &! Scattering coefficient
   tau                 ! Optical thickness
 
-aveg = (1 - fcans)*avg0(Ntyp) + fcans*avgs(Ntyp)
+aveg = (1 - fcans)*avg0 + fcans*avgs
 omega = aveg
 beta = 0.67
 g1 = 2*(1 - (1 - beta)*omega)

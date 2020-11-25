@@ -17,17 +17,17 @@ namelist /params/ acn0,acns,avg0,avgs,cvai,gsnf,hbas,kext,leaf,svai,   &
                   fcly,fsnd,gsat,z0sf 
 
 ! Vegetation parameters
-acn0(:) = [0.1]       ! Snow-free dense canopy albedo
-acns(:) = [0.4]       ! Snow-covered dense canopy albedo
-avg0(:) = [0.21]      ! Canopy element reflectivity
-avgs(:) = [0.6]       ! Canopy snow reflectivity
-cvai(:) = [3.6e4]     ! Vegetation heat capacity per unit VAI (J/K/m^2)
-gsnf(:) = [0.01]      ! Snow-free vegetation moisture conductance (m/s)
-kext(:) = [0.5]       ! Vegetation light extinction coefficient
-leaf(:) = [20]        ! Leaf boundary resistance (s/m)^(1/2)
-svai(:) = [4.4]       ! Intercepted snow capacity per unit VAI (kg/m^2)
-tunl(:) = [240*3600]  ! Canopy snow unloading time scale (s)
+acn0 = 0.1            ! Snow-free dense canopy albedo
+acns = 0.4            ! Snow-covered dense canopy albedo
+avg0 = 0.21           ! Canopy element reflectivity
+avgs = 0.6            ! Canopy snow reflectivity
+cvai = 3.6e4          ! Vegetation heat capacity per unit VAI (J/K/m^2)
+gsnf = 0.01           ! Snow-free vegetation moisture conductance (m/s)
 hbas = 2              ! Canopy base height (m)
+kext = 0.5            ! Vegetation light extinction coefficient
+leaf = 20             ! Leaf boundary resistance (s/m)^(1/2)
+svai = 4.4            ! Intercepted snow capacity per unit VAI (kg/m^2)
+tunl = 240*3600       ! Canopy snow unloading time scale (s)
 wcan = 2.5            ! Canopy wind decay coefficient
 
 ! Snow parameters

@@ -3,7 +3,7 @@
 !-----------------------------------------------------------------------
 subroutine FSM2_TIMESTEP(dt,elev,zT,zU,                                &
                          LW,Ps,Qa,Rf,Sdif,Sdir,Sf,Ta,trans,Ua,         &
-                         Ntyp,alb0,vegh,VAI,                           &
+                         alb0,vegh,VAI,                                &
                          albs,Tsrf,Dsnw,Nsnow,Qcan,Rgrn,Sice,Sliq,     &
                          Sveg,Tcan,Tsnow,Tsoil,Tveg,Vsmc,              &
                          H,LE,LWout,LWsub,Melt,Roff,snd,snw,subl,svg,  &
@@ -38,8 +38,6 @@ real, intent(inout) :: &
   Sf                  ! Snowfall rate (kg/m2/s)
 
 ! Vegetation characteristics
-integer, intent(in) :: &
-  Ntyp                ! Vegetation type
 real, intent(in) :: &
   alb0,              &! Snow-free ground albedo
   vegh,              &! Canopy height (m)
@@ -117,20 +115,20 @@ real :: &
   Eveg(Ncnpy),       &! Moisture flux from vegetation layers (kg/m^2/s)
   SWveg(Ncnpy)        ! SW absorbed by vegetation layers (W/m^2)
 
-call CANOPY(Ntyp,Sveg,Tveg,VAI,cveg,fcans,lveg,Scap,Tveg0)
+call CANOPY(Sveg,Tveg,VAI,cveg,fcans,lveg,Scap,Tveg0)
 
-call SWRAD(Ntyp,alb0,Dsnw,dt,elev,fcans,lveg,Sdif,Sdir,Sf,Tsrf,        &
+call SWRAD(alb0,Dsnw,dt,elev,fcans,lveg,Sdif,Sdir,Sf,Tsrf,             &
            albs,fsnow,SWout,SWsrf,SWsub,SWveg,tdif)
 
 call THERMAL(Dsnw,Nsnow,Sice,Sliq,Tsnow,Tsoil,Vsmc,csoil,Ds1,          &
              gs1,ksnow,ksoil,ks1,Ts1)
 
-call SRFEBAL(Ntyp,cveg,Ds1,dt,fcans,fsnow,gs1,ks1,lveg,LW,Ps,Qa,       &
+call SRFEBAL(cveg,Ds1,dt,fcans,fsnow,gs1,ks1,lveg,LW,Ps,Qa,            &
              SWsrf,Sveg,SWveg,Ta,tdif,Ts1,Tveg0,Ua,VAI,vegh,zT,zU,     &
              Tsrf,Qcan,Sice,Tcan,Tveg,                                 &
              Esrf,Eveg,Gsrf,H,LE,LWout,LWsub,Melt,subl,Usub)
 
-call INTERCEPT(Ntyp,dt,cveg,Eveg,Scap,Sf,Sveg,Tveg,drip,svg,unload)
+call INTERCEPT(dt,cveg,Eveg,Scap,Sf,Sveg,Tveg,drip,svg,unload)
 
 call SNOW(dt,drip,Esrf,Gsrf,ksnow,ksoil,Melt,Rf,Sf,Ta,trans,Tsrf,unload, &
           Nsnow,Dsnw,Rgrn,Sice,Sliq,Tsnow,Tsoil,Gsoil,Roff,snd,snw,Wflx)

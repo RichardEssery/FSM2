@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Surface and vegetation net shortwave radiation
 !-----------------------------------------------------------------------
-subroutine SWRAD(Ntyp,alb0,Dsnw,dt,elev,fcans,lveg,Sdif,Sdir,Sf,Tsrf,  &
+subroutine SWRAD(alb0,Dsnw,dt,elev,fcans,lveg,Sdif,Sdir,Sf,Tsrf,       &
                  albs,fsnow,SWout,SWsrf,SWsub,SWveg,tdif)
 
 #include "OPTS.h"
@@ -26,9 +26,6 @@ use PARAMETERS, only: &
   tmlt                ! Melting snow albedo decay time scale (s)
  
 implicit none
-
-integer, intent(in) :: &
-  Ntyp                ! Vegetation type
 
 real, intent(in) :: &
   alb0,              &! Snow-free ground albedo
@@ -102,16 +99,16 @@ tdif(:) = 0
 tdir(:) = 0
 if (lveg(1) > 0) then
 #if CANRAD == 1
-  acan(:) = (1 - fcans(:))*acn0(Ntyp) + fcans(:)*acns(Ntyp)
-  tdif(:) = exp(-1.6*kext(Ntyp)*lveg(:))
+  acan(:) = (1 - fcans(:))*acn0 + fcans(:)*acns
+  tdif(:) = exp(-1.6*kext*lveg(:))
   tdir(:) = tdif(:)
-  if (elev > 0) tdir(:) = exp(-kext(Ntyp)*lveg(:)/sin(elev))
+  if (elev > 0) tdir(:) = exp(-kext*lveg(:)/sin(elev))
   rdif(:) = (1 - tdif(:))*acan(:)
   rdir(:) = (1 - tdir(:))*acan(:)
 #endif
 #if CANRAD == 2
   do k = 1, Ncnpy
-    call TWOSTREAM(Ntyp,elev,fcans(k),lveg(k),rdif(k),rdir(k),tdif(k),tdir(k))
+    call TWOSTREAM(elev,fcans(k),lveg(k),rdif(k),rdir(k),tdif(k),tdir(k))
   end do
 #endif
   A(:,:) = 0

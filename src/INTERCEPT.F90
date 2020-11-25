@@ -1,8 +1,7 @@
 !-----------------------------------------------------------------------
 ! Mass balance of snow intercepted by vegetation
 !-----------------------------------------------------------------------
-subroutine INTERCEPT(Ntyp,dt,cveg,Eveg,Scap,Sf,Sveg,Tveg,              &
-                     drip,svg,unload)
+subroutine INTERCEPT(dt,cveg,Eveg,Scap,Sf,Sveg,Tveg,drip,svg,unload)
 
 use CONSTANTS, only: &
   Lf,                &! Latent heat of fusion (J/kg)
@@ -15,9 +14,6 @@ use PARAMETERS, only: &
   tunl                ! Canopy snow unloading time scale (s)
 
 implicit none
-
-integer, intent(in) :: &
-  Ntyp                ! Vegetation type
 
 real, intent(in) :: &
   dt,                &! Timestep (s)
@@ -61,8 +57,8 @@ if (Scap(1) > 0) then
     Sveg(k) = max(Sveg(k), 0.)
 
     ! Unloading of canopy snow
-    unload = unload + Sveg(k)*dt/tunl(Ntyp)
-    Sveg(k) = (1 - dt/tunl(Ntyp))*Sveg(k)
+    unload = unload + Sveg(k)*dt/tunl
+    Sveg(k) = (1 - dt/tunl)*Sveg(k)
 
     ! Melting of canopy snow
     if (Tveg(k) > Tm) then

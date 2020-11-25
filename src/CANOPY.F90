@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Properties of vegetation canopy layers
 !-----------------------------------------------------------------------
-subroutine CANOPY(Ntyp,Sveg,Tveg,VAI,cveg,fcans,lveg,Scap,Tveg0)
+subroutine CANOPY(Sveg,Tveg,VAI,cveg,fcans,lveg,Scap,Tveg0)
 
 #include "OPTS.h"
 
@@ -17,9 +17,6 @@ use PARAMETERS, only: &
   svai                ! Intercepted snow capacity per unit VAI (kg/m^2)
 
 implicit none
-
-integer, intent(in) :: &
-  Ntyp                ! Vegetation type
 
 real, intent(in) :: &
   Sveg(Ncnpy),       &! Snow mass on vegetation layers (kg/m^2)
@@ -40,8 +37,8 @@ lveg(1) = VAI
 lveg(1) = fvg1*VAI
 lveg(2) = (1 - fvg1)*VAI
 #endif
-cveg(:) = cvai(Ntyp)*lveg(:) + hcap_ice*Sveg(:)
-Scap = svai(Ntyp)*lveg(:)
+cveg(:) = cvai*lveg(:) + hcap_ice*Sveg(:)
+Scap = svai*lveg(:)
 fcans(:) = 0
 if (VAI > epsilon(VAI)) fcans(:) = (Sveg(:)/Scap(:))**0.67
 Tveg0 = Tveg

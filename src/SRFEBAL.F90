@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
 ! Surface energy balance
 !-----------------------------------------------------------------------
-subroutine SRFEBAL(Ntyp,cveg,Ds1,dt,fcans,fsnow,gs1,ks1,lveg,LW,Ps,Qa, &
+subroutine SRFEBAL(cveg,Ds1,dt,fcans,fsnow,gs1,ks1,lveg,LW,Ps,Qa,      &
                    SWsrf,Sveg,SWveg,Ta,tdif,Ts1,Tveg0,Ua,VAI,vegh,     &
                    zT,zU,Tsrf,Qcan,Sice,Tcan,Tveg,                     &
                    Esrf,Eveg,Gsrf,H,LE,LWout,LWsub,Melt,subl,Usub)
@@ -36,9 +36,6 @@ use PARAMETERS, only: &
   z0sn                ! Snow roughness length (m)
 
 implicit none
-
-integer, intent(in) :: &
-  Ntyp                ! Vegetation type
 
 real, intent(in) :: &
   Ds1,               &! Surface layer thickness (m)
@@ -171,7 +168,7 @@ zh(2) = 0.5*(1 - fvg1)*vegh
 #endif
 
 ! Roughness lengths
-fveg = 1 - exp(-kext(Ntyp)*VAI)
+fveg = 1 - exp(-kext*VAI)
 d = 0.67*fveg*vegh
 z0g = (z0sn**fsnow) * (z0sf**(1 - fsnow))
 z0h = 0.1*z0g
@@ -293,7 +290,7 @@ do ne = 1, 20
   do k = 1, Ncnpy
     Uc = fveg*exp(wcan*(zh(k)/vegh - 1))*Uh  +   &
          (1 - fveg)*(uso/vkman)*(log(zh(k)/z0g) - psim(zh(k),rL) + psim(z0g,rL))
-    gv(k) = sqrt(Uc)*lveg(k)/leaf(Ntyp)
+    gv(k) = sqrt(Uc)*lveg(k)/leaf
   end do
 #if CANMOD == 2
   rd = vegh*exp(wcan)*(exp(-wcan*zh(2)/vegh) - exp(-wcan*zh(1)/vegh))/(wcan*Kh)
@@ -336,7 +333,7 @@ do ne = 1, 20
     if (Qcan(k) > Qveg(k)) then
       wveg(k) = 1
     else
-      wveg(k) = fcans(k) + (1 - fcans(k))*gsnf(Ntyp)/(gsnf(Ntyp) + gv(k))
+      wveg(k) = fcans(k) + (1 - fcans(k))*gsnf/(gsnf + gv(k))
     end if
   end do
 
