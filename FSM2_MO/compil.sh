@@ -19,6 +19,7 @@ cat > OPTS.h << EOF
 #define DENSTY 1   /* snow density                  : 0, 1            */
 #define EXCHNG 1   /* turbulent exchange            : 0, 1            */
 #define HYDROL 1   /* snow hydraulics               : 0, 1            */
+#define SGRAIN 2   /* snow grain growth             : 1, 2            */
 #define SNFRAC 2   /* snow cover fraction           : 1, 2            */
 /* Driving data options                             : Possible values */
 #define SETPAR 0   /* parameter inputs              : 0, 1            */
