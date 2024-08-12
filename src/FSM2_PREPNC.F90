@@ -38,7 +38,7 @@ integer :: &
   time_dimid,        &! Time dimension ID
   status              ! Error status
 
-! Start time in time units
+! Start time written to time units
 write(units,'(A12,i4,A1,i2.2,A1,i2.2,A1,i2.2,A6)')  &
             'hours since ',year,'-',month,'-',day,' ',int(hour),':00:00'
 
