@@ -1,5 +1,5 @@
 !-----------------------------------------------------------------------
-! Write one timestep to the NetCDF output file
+! Write variabls for one timestep to the NetCDF output file
 !-----------------------------------------------------------------------
 subroutine FSM2_WRITENC(Dsnw,dt,H,LE,LWout,Melt,ncid,Nsnow,Rgrn,Roff,  &
                         Sice,Sliq,snd,snw,SWout,Tsnow,Tsoil, Tsrf,     &
