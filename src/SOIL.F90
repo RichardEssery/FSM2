@@ -18,39 +18,38 @@ real, intent(in) :: &
 real, intent(inout) :: &
   Tsoil(Nsoil)        ! Soil layer temperatures (K)
 
-integer :: k          ! Soil layer counter
+integer :: n          ! Soil layer counter
 
 real :: &
   a(Nsoil),          &! Below-diagonal matrix elements
   b(Nsoil),          &! Diagonal matrix elements
   c(Nsoil),          &! Above-diagonal matrix elements
-  dTs(Nsoil),        &! Temperature increments (k)
-  gs(Nsoil),         &! Thermal conductivity between layers (W/m^2/k)
+  dTs(Nsoil),        &! Temperature increments (K)
+  U(Nsoil),          &! Thermal transmittance between layers (W/m^2/K)
   rhs(Nsoil)          ! Matrix equation rhs
 
-do k = 1, Nsoil - 1
-  gs(k) = 2 / (Dzsoil(k)/ksoil(k) + Dzsoil(k+1)/ksoil(k+1))
-end do
+U(1) = 2 / (Dzsoil(1)/ksoil(1) + Dzsoil(2)/ksoil(2))
 a(1) = 0
-b(1) = csoil(1) + gs(1)*dt
-c(1) = - gs(1)*dt
-rhs(1) = (Gsoil - gs(1)*(Tsoil(1) - Tsoil(2)))*dt
-do k = 2, Nsoil - 1
-  a(k) = c(k-1)
-  b(k) = csoil(k) + (gs(k-1) + gs(k))*dt
-  c(k) = - gs(k)*dt
-  rhs(k) = gs(k-1)*(Tsoil(k-1) - Tsoil(k))*dt  &
-           + gs(k)*(Tsoil(k+1) - Tsoil(k))*dt 
+b(1) = csoil(1) + U(1)*dt
+c(1) = - U(1)*dt
+rhs(1) = (Gsoil - U(1)*(Tsoil(1) - Tsoil(2)))*dt
+do n = 2, Nsoil - 1
+  U(n) = 2 / (Dzsoil(n)/ksoil(n) + Dzsoil(n+1)/ksoil(n+1))
+  a(n) = c(n-1)
+  b(n) = csoil(n) + (U(n-1) + U(n))*dt
+  c(n) = - U(n)*dt
+  rhs(n) = U(n-1)*(Tsoil(n-1) - Tsoil(n))*dt  &
+           + U(n)*(Tsoil(n+1) - Tsoil(n))*dt 
 end do
-k = Nsoil
-gs(k) = ksoil(k)/Dzsoil(k)
-a(k) = c(k-1)
-b(k) = csoil(k) + (gs(k-1) + gs(k))*dt
-c(k) = 0
-rhs(k) = gs(k-1)*(Tsoil(k-1) - Tsoil(k))*dt
+n = Nsoil
+U(n) = ksoil(n)/Dzsoil(n)
+a(n) = c(n-1)
+b(n) = csoil(n) + (U(n-1) + U(n))*dt
+c(n) = 0
+rhs(n) = U(n-1)*(Tsoil(n-1) - Tsoil(n))*dt
 call TRIDIAG(Nsoil,Nsoil,a,b,c,rhs,dTs)
-do k = 1, Nsoil
-  Tsoil(k) = Tsoil(k) + dTs(k)
+do n = 1, Nsoil
+  Tsoil(n) = Tsoil(n) + dTs(n)
 end do
 
 end subroutine SOIL

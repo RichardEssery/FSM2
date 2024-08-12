@@ -1,9 +1,9 @@
 !-----------------------------------------------------------------------
 ! Write output
 !-----------------------------------------------------------------------
-subroutine FSM2_OUTPUT(Ncols,Nrows,year,month,day,hour,                &
+subroutine FSM2_OUTPUT(Npnts,year,month,day,hour,                      &
                        H,LE,LWout,LWsub,Melt,Roff,snd,snw,subl,svg,    &
-                       SWout,SWsub,Tsoil,Tsrf,Tveg,Usub,VAI)
+                       SWout,SWsub,Tsoil,Tsrf,Tsub,Tveg,Usub)
 
 #include "OPTS.h"
 
@@ -19,34 +19,33 @@ use LAYERS, only: &
 implicit none
 
 integer, intent(in) :: &
-  Ncols,             &! Number of columns in grid
-  Nrows,             &! Number of rows in grid
+  Npnts,             &! Number of points
   year,              &! Year
   month,             &! Month of year
   day                 ! Day of month
 
 real, intent(in) :: &
-  hour,                     &! Hour of day
-  H(Nrows,Ncols),           &! Sensible heat flux to the atmosphere (W/m^2)
-  LE(Nrows,Ncols),          &! Latent heat flux to the atmosphere (W/m^2)
-  LWout(Nrows,Ncols),       &! Outgoing LW radiation (W/m^2)
-  LWsub(Nrows,Ncols),       &! Subcanopy downward LW radiation (W/m^2)
-  Melt(Nrows,Ncols),        &! Surface melt rate (kg/m^2/s)
-  Roff(Nrows,Ncols),        &! Runoff from snow (kg/m^2/s)
-  snd(Nrows,Ncols),         &! Snow depth (m)
-  subl(Nrows,Ncols),        &! Sublimation rate (kg/m^2/s)
-  svg(Nrows,Ncols),         &! Total snow mass on vegetation (kg/m^2)
-  snw(Nrows,Ncols),         &! Total snow mass on ground (kg/m^2) 
-  SWout(Nrows,Ncols),       &! Outgoing SW radiation (W/m^2)
-  SWsub(Nrows,Ncols),       &! Subcanopy downward SW radiation (W/m^2)
-  Tsoil(Nsoil,Nrows,Ncols), &! Soil layer temperatures (K)
-  Tsrf(Nrows,Ncols),        &! Snow/ground surface temperature (K)
-  Tveg(Ncnpy,Nrows,Ncols),  &! Vegetation layer temperatures (K)
-  Usub(Nrows,Ncols),        &! Subcanopy wind speed (m/s)
-  VAI(Nrows,Ncols)           ! Vegetation area index
+  hour,              &! Hour of day
+  H(Npnts),          &! Sensible heat flux to the atmosphere (W/m^2)
+  LE(Npnts),         &! Latent heat flux to the atmosphere (W/m^2)
+  LWout(Npnts),      &! Outgoing LW radiation (W/m^2)
+  LWsub(Npnts),      &! Subcanopy downward LW radiation (W/m^2)
+  Melt(Npnts),       &! Surface melt rate (kg/m^2/s)
+  Roff(Npnts),       &! Runoff from snow (kg/m^2/s)
+  snd(Npnts),        &! Snow depth (m)
+  subl(Npnts),       &! Sublimation rate (kg/m^2/s)
+  svg(Npnts),        &! Total snow mass on vegetation (kg/m^2)
+  snw(Npnts),        &! Total snow mass on ground (kg/m^2) 
+  SWout(Npnts),      &! Outgoing SW radiation (W/m^2)
+  SWsub(Npnts),      &! Subcanopy downward SW radiation (W/m^2)
+  Tsoil(Nsoil,Npnts),&! Soil layer temperatures (K)
+  Tsrf(Npnts),       &! Snow/ground surface temperature (K)
+  Tsub(Npnts),       &! Subcanopy air temperature (K)
+  Tveg(Ncnpy,Npnts), &! Vegetation layer temperatures (K)
+  Usub(Npnts)         ! Subcanopy wind speed (m/s)
 
 ! Subcanopy diagnostic outputs
-if (maxval(VAI) > 0) write(ucan,100) year,month,day,hour,LWsub,SWsub,Usub
+write(ucan,100) year,month,day,hour,LWsub,SWsub,Tsub,Usub
 
 ! Flux outputs
 write(uflx,100) year,month,day,hour,H,LE,LWout,Melt,Roff,subl,SWout

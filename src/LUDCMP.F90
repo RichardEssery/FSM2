@@ -27,6 +27,7 @@ do i = 1, N
   do j = 1, N
     if (abs(Acp(i,j)) > aamax) aamax = abs(Acp(i,j))
   end do
+  if (aamax == 0) return
   vv(i) = 1/aamax
 end do
 

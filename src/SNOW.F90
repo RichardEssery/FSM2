@@ -8,6 +8,7 @@ subroutine SNOW(dt,drip,Esrf,Gsrf,ksnow,ksoil,Melt,Rf,Sf,Ta,trans,     &
 #include "OPTS.h"
 
 use CONSTANTS, only: &
+  e0,                &! Saturation vapour pressure at Tm (Pa)
   g,                 &! Acceleration due to gravity (m/s^2)
   hcap_ice,          &! Specific heat capacity of ice (J/K/kg)
   hcap_wat,          &! Specific heat capacity of water (J/K/kg)
@@ -15,8 +16,9 @@ use CONSTANTS, only: &
   Ls,                &! Latent heat of sublimation (J/kg)
   mu_wat,            &! Dynamic viscosity of water (kg/m/s)
   rho_ice,           &! Density of ice (kg/m^3)
-  rho_wat,           &! Density of water (kg/m^3)
-  Tm                  ! Melting point (K)
+  rho_wat,           &! Density of water (kg/m^3
+  Rwat,              &! Gas constant for water vapour (J/K/kg)
+  Tm                  ! Melting point (n)
 
 use LAYERS, only: &
   Dzsnow,            &! Minimum snow layer thicknesses (m)
@@ -46,9 +48,9 @@ real, intent(in) :: &
   Melt,              &! Surface melt rate (kg/m^2/s)
   Rf,                &! Rainfall rate (kg/m^2/s)
   Sf,                &! Snowfall rate (kg/m^2/s)
-  Ta,                &! Air temperature (K)
+  Ta,                &! Air temperature (n)
   trans,             &! Wind-blown snow transport rate (kg/m^2/s)
-  Tsrf,              &! Snow/ground surface temperature (K)
+  Tsrf,              &! Snow/ground surface temperature (n)
   unload,            &! Snow mass unloaded from vegetation (kg/m^2)
   ksnow(Nsmax),      &! Thermal conductivity of snow layers (W/m/K)
   ksoil(Nsoil)        ! Thermal conductivity of soil layers (W/m/K)
@@ -61,8 +63,8 @@ real, intent(inout) :: &
   Rgrn(Nsmax),       &! Snow layer grain radius (m)
   Sice(Nsmax),       &! Ice content of snow layers (kg/m^2)
   Sliq(Nsmax),       &! Liquid content of snow layers (kg/m^2)
-  Tsnow(Nsmax),      &! Snow layer temperatures (K)
-  Tsoil(Nsoil)        ! Soil layer temperatures (K)
+  Tsnow(Nsmax),      &! Snow layer temperatures (n)
+  Tsoil(Nsoil)        ! Soil layer temperatures (n)
 
 real, intent(out) :: &
   Gsoil,             &! Heat flux into soil (W/m^2)
@@ -73,20 +75,24 @@ real, intent(out) :: &
 
 integer :: &
   i,j,               &! Hydrology iteration counters
-  k,                 &! Snow layer counter
-  knew,              &! New snow layer pointer
-  kold,              &! Old snow layer pointer
+  n,                 &! Snow layer counter
+  new,               &! New snow layer pointer
   Nold                ! Previous number of snow layers
 
 real :: &
   coldcont,          &! Layer cold content (J/m^2)
   dnew,              &! New snow layer thickness (m)
+  dpdT,              &! Derivative of saturation vapour density (kg/m^3/K)
   dSice,             &! Change in layer ice content (kg/m^2)
+  dTdz,              &! Snow temperature gradient (K/m)
   Esnow,             &! Snow sublimation rate (kg/m^2/s)
   ggr,               &! Grain area growth rate (m^2/s)
   mass,              &! Mass of overlying snow (kg/m^2)
+  qv,                &! Vertical vapour flux in snow (kg/m^2/s)
   rhos,              &! Density of snow layer (kg/m^3)
   SliqMax,           &! Maximum liquid content for layer (kg/m^2)
+  Tl,                &! Snow layer lower boundary temperature (n)
+  Tu,                &! Snow layer upper boundary temperature (n)
   wt                  ! Layer weighting
 
 real :: &
@@ -94,15 +100,15 @@ real :: &
   b(Nsmax),          &! Diagonal matrix elements
   c(Nsmax),          &! Above-diagonal matrix elements
   csnow(Nsmax),      &! Areal heat capacity of snow (J/K/m^2)
-  dTs(Nsmax),        &! Temperature increments (k)
+  dTs(Nsmax),        &! Temperature increments (n)
   D(Nsmax),          &! Layer thickness before adjustment (m)
   E(Nsmax),          &! Energy contents before adjustment (J/m^2)
-  Gs(Nsmax),         &! Thermal conductivity between layers (W/m^2/k)
   phi(Nsmax),        &! Porosity of snow layers
   rhs(Nsmax),        &! Matrix equation rhs
   R(Nsmax),          &! Snow grain radii before adjustment (kg/m^2)
   S(Nsmax),          &! Ice contents before adjustment (kg/m^2)
-  U(Nsmax),          &! Layer internal energy contents (J/m^2)
+  U(Nsmax),          &! Thermal transmittance between layers (W/m^2/K)
+                      ! / Layer internal energy contents (J/m^2)
   W(Nsmax)            ! Liquid contents before adjustment (kg/m^2)
 
 real :: &
@@ -112,7 +118,7 @@ real :: &
   thetar(Nsmax),     &! Irreducible water content
   thetaw(Nsmax),     &! Volumetric liquid water content
   theta0(Nsmax),     &! Liquid water content at start of timestep
-  Qw(Nsmax+1)         ! Water flux at snow layer boundaruess (m/s)
+  Qw(Nsmax+1)         ! Water flux at snow layer boundaries (m/s)
 
 ! No snow
 Gsoil = Gsrf
@@ -123,61 +129,60 @@ Wflx(:) = 0
 if (Nsnow > 0) then 
 
   ! Heat conduction
-  do k = 1, Nsnow
-    csnow(k) = Sice(k)*hcap_ice + Sliq(k)*hcap_wat
+  do n = 1, Nsnow
+    csnow(n) = Sice(n)*hcap_ice + Sliq(n)*hcap_wat
   end do
   if (Nsnow == 1) then
-    Gs(1) = 2 / (Dsnw(1)/ksnow(1) + Dzsoil(1)/ksoil(1))
-    dTs(1) = (Gsrf + Gs(1)*(Tsoil(1) - Tsnow(1)))*dt /  &
-             (csnow(1) + Gs(1)*dt)
+    U(1) = 2 / (Dsnw(1)/ksnow(1) + Dzsoil(1)/ksoil(1))
+    dTs(1) = (Gsrf + U(1)*(Tsoil(1) - Tsnow(1)))*dt /  &
+             (csnow(1) + U(1)*dt)
   else
-    do k = 1, Nsnow - 1
-      Gs(k) = 2 / (Dsnw(k)/ksnow(k) + Dsnw(k+1)/ksnow(k+1))
-    end do
+    U(1) = 2 / (Dsnw(1)/ksnow(1) + Dsnw(2)/ksnow(2))
     a(1) = 0
-    b(1) = csnow(1) + Gs(1)*dt
-    c(1) = - Gs(1)*dt
-    rhs(1) = (Gsrf - Gs(1)*(Tsnow(1) - Tsnow(2)))*dt
-    do k = 2, Nsnow - 1
-      a(k) = c(k-1)
-      b(k) = csnow(k) + (Gs(k-1) + Gs(k))*dt
-      c(k) = - Gs(k)*dt
-      rhs(k) = Gs(k-1)*(Tsnow(k-1) - Tsnow(k))*dt  &
-               + Gs(k)*(Tsnow(k+1) - Tsnow(k))*dt 
+    b(1) = csnow(1) + U(1)*dt
+    c(1) = - U(1)*dt
+    rhs(1) = (Gsrf - U(1)*(Tsnow(1) - Tsnow(2)))*dt
+    do n = 2, Nsnow - 1
+      U(n) = 2 / (Dsnw(n)/ksnow(n) + Dsnw(n+1)/ksnow(n+1))
+      a(n) = c(n-1)
+      b(n) = csnow(n) + (U(n-1) + U(n))*dt
+      c(n) = - U(n)*dt
+      rhs(n) = U(n-1)*(Tsnow(n-1) - Tsnow(n))*dt  &
+               + U(n)*(Tsnow(n+1) - Tsnow(n))*dt 
     end do
-    k = Nsnow
-    Gs(k) = 2 / (Dsnw(k)/ksnow(k) + Dzsoil(1)/ksoil(1))
-    a(k) = c(k-1)
-    b(k) = csnow(k) + (Gs(k-1) + Gs(k))*dt
-    c(k) = 0
-    rhs(k) = Gs(k-1)*(Tsnow(k-1) - Tsnow(k))*dt  &
-             + Gs(k)*(Tsoil(1) - Tsnow(k))*dt
+    n = Nsnow
+    U(n) = 2 / (Dsnw(n)/ksnow(n) + Dzsoil(1)/ksoil(1))
+    a(n) = c(n-1)
+    b(n) = csnow(n) + (U(n-1) + U(n))*dt
+    c(n) = 0
+    rhs(n) = U(n-1)*(Tsnow(n-1) - Tsnow(n))*dt  &
+             + U(n)*(Tsoil(1) - Tsnow(n))*dt
     call TRIDIAG(Nsnow,Nsmax,a,b,c,rhs,dTs)
   end if 
-  do k = 1, Nsnow
-    Tsnow(k) = Tsnow(k) + dTs(k)
+  do n = 1, Nsnow
+    Tsnow(n) = Tsnow(n) + dTs(n)
   end do
-  k = Nsnow
-  Gsoil = Gs(k)*(Tsnow(k) - Tsoil(1))
+  n = Nsnow
+  Gsoil = U(n)*(Tsnow(n) - Tsoil(1))
 
   ! Convert melting ice to liquid water
   dSice = Melt*dt
-  do k = 1, Nsnow
-    coldcont = csnow(k)*(Tm - Tsnow(k))
+  do n = 1, Nsnow
+    coldcont = csnow(n)*(Tm - Tsnow(n))
     if (coldcont < 0) then
       dSice = dSice - coldcont/Lf
-      Tsnow(k) = Tm
+      Tsnow(n) = Tm
     end if
     if (dSice > 0) then
-      if (dSice > Sice(k)) then  ! Layer melts completely
-        dSice = dSice - Sice(k)
-        Dsnw(k) = 0
-        Sliq(k) = Sliq(k) + Sice(k)
-        Sice(k) = 0
+      if (dSice > Sice(n)) then  ! Layer melts completely
+        dSice = dSice - Sice(n)
+        Dsnw(n) = 0
+        Sliq(n) = Sliq(n) + Sice(n)
+        Sice(n) = 0
       else                       ! Layer melts partially
-        Dsnw(k) = (1 - dSice/Sice(k))*Dsnw(k)
-        Sice(k) = Sice(k) - dSice
-        Sliq(k) = Sliq(k) + dSice
+        Dsnw(n) = (1 - dSice/Sice(n))*Dsnw(n)
+        Sice(n) = Sice(n) - dSice
+        Sliq(n) = Sliq(n) + dSice
         dSice = 0
       end if
     end if
@@ -186,30 +191,30 @@ if (Nsnow > 0) then
   ! Remove snow by sublimation 
   dSice = Esrf*dt
   if (dSice > 0) then
-    do k = 1, Nsnow
-      if (dSice > Sice(k)) then  ! Layer sublimates completely
-        dSice = dSice - Sice(k)
-        Dsnw(k) = 0
-        Sice(k) = 0
+    do n = 1, Nsnow
+      if (dSice > Sice(n)) then  ! Layer sublimates completely
+        dSice = dSice - Sice(n)
+        Dsnw(n) = 0
+        Sice(n) = 0
       else                       ! Layer sublimates partially
-        Dsnw(k) = (1 - dSice/Sice(k))*Dsnw(k)
-        Sice(k) = Sice(k) - dSice
+        Dsnw(n) = (1 - dSice/Sice(n))*Dsnw(n)
+        Sice(n) = Sice(n) - dSice
         dSice = 0
       end if
     end do
   end if
 
-  ! Remove wind-trasported snow 
+  ! Remove wind-transported snow 
   dSice = trans*dt
   if (dSice > 0) then
-    do k = 1, Nsnow
-      if (dSice > Sice(k)) then  ! Layer completely removed
-        dSice = dSice - Sice(k)
-        Dsnw(k) = 0
-        Sice(k) = 0
+    do n = 1, Nsnow
+      if (dSice > Sice(n)) then  ! Layer completely removed
+        dSice = dSice - Sice(n)
+        Dsnw(n) = 0
+        Sice(n) = 0
       else                       ! Layer partially removed
-        Dsnw(k) = (1 - dSice/Sice(k))*Dsnw(k)
-        Sice(k) = Sice(k) - dSice
+        Dsnw(n) = (1 - dSice/Sice(n))*Dsnw(n)
+        Sice(n) = Sice(n) - dSice
         dSice = 0
       end if
     end do
@@ -217,51 +222,76 @@ if (Nsnow > 0) then
 
 #if DENSTY == 0
   ! Fixed snow density
-  do k = 1, Nsnow
-    if (Dsnw(k) > epsilon(Dsnw)) Dsnw(k) = (Sice(k) + Sliq(k)) / rfix
+  do n = 1, Nsnow
+    if (Dsnw(n) > epsilon(Dsnw)) Dsnw(n) = (Sice(n) + Sliq(n)) / rfix
   end do
-#endif
-#if DENSTY == 1
+#elif DENSTY == 1
   ! Snow compaction with age
-  do k = 1, Nsnow
-    if (Dsnw(k) > epsilon(Dsnw)) then
-      rhos = (Sice(k) + Sliq(k)) / Dsnw(k)
-      if (Tsnow(k) >= Tm) then
+  do n = 1, Nsnow
+    if (Dsnw(n) > epsilon(Dsnw)) then
+      rhos = (Sice(n) + Sliq(n)) / Dsnw(n)
+      if (Tsnow(n) >= Tm) then
           if (rhos < rmlt) rhos = rmlt + (rhos - rmlt)*exp(-dt/trho)
       else
           if (rhos < rcld) rhos = rcld + (rhos - rcld)*exp(-dt/trho)
       end if
-      Dsnw(k) = (Sice(k) + Sliq(k)) / rhos
+      Dsnw(n) = (Sice(n) + Sliq(n)) / rhos
     end if
   end do
-#endif
-#if DENSTY == 2
+#elif DENSTY == 2
   ! Snow compaction by overburden
     mass = 0
-    do k = 1, Nsnow
-      mass = mass + 0.5*(Sice(k) + Sliq(k)) 
-      if (Dsnw(k) > epsilon(Dsnw)) then
-        rhos = (Sice(k) + Sliq(k)) / Dsnw(k)
-        rhos = rhos + (rhos*g*mass*dt/(eta0*exp(-(Tsnow(k) - Tm)/12.4 + rhos/55.6))  &
-               + dt*rhos*snda*exp((Tsnow(k) - Tm)/23.8 - max(rhos - 150, 0.)/21.7))
-        Dsnw(k) = (Sice(k) + Sliq(k)) / rhos
+    do n = 1, Nsnow
+      mass = mass + 0.5*(Sice(n) + Sliq(n)) 
+      if (Dsnw(n) > epsilon(Dsnw)) then
+        rhos = (Sice(n) + Sliq(n)) / Dsnw(n)
+        rhos = rhos + (rhos*g*mass*dt/(eta0*exp(-(Tsnow(n) - Tm)/12.4 + rhos/55.6))  &
+               + dt*rhos*snda*exp((Tsnow(n) - Tm)/23.8 - max(rhos - 150, 0.)/21.7))
+        Dsnw(n) = (Sice(n) + Sliq(n)) / rhos
       end if
-      mass = mass + 0.5*(Sice(k) + Sliq(k))
+      mass = mass + 0.5*(Sice(n) + Sliq(n))
     end do
+#else
+    stop 'Unknown option DENSTY'
 #endif
 
-  ! Snow grain growth
-  do k = 1, Nsnow
+#if SGRAIN == 0
+  ! Snow grain growth not represented
+  Rgrn(:) = rgr0
+#elif SGRAIN == 1
+  ! Temperature dependent snow grain growth
+  do n = 1, Nsnow
     ggr = 2e-13
-    if (Tsnow(k) < Tm) then
-      if (Rgrn(k) < 1.50e-4) then
+    if (Tsnow(n) < Tm) then
+      if (Rgrn(n) < 1.50e-4) then
         ggr = 2e-14
       else
-        ggr = 7.3e-8*exp(-4600/Tsnow(k))
+        ggr = 7.3e-8*exp(-4600/Tsnow(n))
       end if
     end if
-    Rgrn(k) = Rgrn(k) + dt*ggr/Rgrn(k)
+    Rgrn(n) = Rgrn(n) + dt*ggr/Rgrn(n)
   end do
+#elif SGRAIN == 2
+  ! Temperature gradient dependent snow grain growth
+  do n = 1, Nsnow
+    Tu = Tsrf
+    if (n > 1) Tu = (Dsnw(n-1)*Tsnow(n) + Dsnw(n)*Tsnow(n-1)) / (Dsnw(n) + Dsnw(n-1))
+    Tl = (Dzsoil(1)*Tsnow(n) + Dsnw(n)*Tsoil(1)) / (Dsnw(n) + Dzsoil(1))
+    if (n < Nsnow) Tl = (Dsnw(n+1)*Tsnow(n) + Dsnw(n)*Tsnow(n+1)) / (Dsnw(n) + Dsnw(n+1))
+    dTdz = abs(Tu - Tl) / Dsnw(n)
+    thetaw(n) = Sliq(n)/(rho_wat*Dsnw(n))
+    if (thetaw(n) < 1e-4) then
+      dpdT = (e0/(Rwat*Tsnow(n)**2))*(Ls/(Rwat*Tsnow(n)) - 1)*exp((Ls/Rwat)*(1/Tm - 1/Tsnow(n)))
+      qv = 9.2e-5*(Tsnow(n)/Tm)**6*dpdT*dTdz
+      ggr = 1.25e-7*min(qv, 1e-6)
+    else
+      ggr = 1e-12*min(thetaw(n) + 0.05, 0.14)
+    end if
+    Rgrn(n) = Rgrn(n) + dt*ggr/Rgrn(n)
+  end do
+#else
+  stop 'Unknown option SGRAIN'
+#endif
 
 end if  ! Existing snowpack
 
@@ -306,9 +336,9 @@ D(:) = Dsnw(:)
 R(:) = Rgrn(:)
 S(:) = Sice(:)
 W(:) = Sliq(:)
-do k = 1, Nsnow
-  csnow(k) = Sice(k)*hcap_ice + Sliq(k)*hcap_wat
-  E(k) = csnow(k)*(Tsnow(k) - Tm)
+do n = 1, Nsnow
+  csnow(n) = Sice(n)*hcap_ice + Sliq(n)*hcap_wat
+  E(n) = csnow(n)*(Tsnow(n) - Tm)
 end do
 Nold = Nsnow
 snd = sum(Dsnw(:))
@@ -327,105 +357,105 @@ if (snd > 0) then  ! Existing or new snowpack
   ! Re-assign and count snow layers
   dnew = snd
   Dsnw(1) = dnew
-  k = 1
+  n = 1
   if (Dsnw(1) > Dzsnow(1)) then 
-    do k = 1, Nsmax
-      Dsnw(k) = Dzsnow(k)
-      dnew = dnew - Dzsnow(k)
-      if (dnew <= Dzsnow(k) .or. k == Nsmax) then
-        Dsnw(k) = Dsnw(k) + dnew
+    do n = 1, Nsmax
+      Dsnw(n) = Dzsnow(n)
+      dnew = dnew - Dzsnow(n)
+      if (dnew <= Dzsnow(n) .or. n == Nsmax) then
+        Dsnw(n) = Dsnw(n) + dnew
         exit
       end if
     end do
   end if
-  Nsnow = k
+  Nsnow = n
 
   ! Fill new layers from the top downwards
-  knew = 1
+  new = 1
   dnew = Dsnw(1)
-  do kold = 1, Nold
+  do n = 1, Nold
     do
-      if (D(kold) < dnew) then
+      if (D(n) < dnew) then
         ! All snow from old layer partially fills new layer
-        Rgrn(knew) = Rgrn(knew) + S(kold)*R(kold)
-        Sice(knew) = Sice(knew) + S(kold)
-        Sliq(knew) = Sliq(knew) + W(kold)
-        U(knew) = U(knew) + E(kold)
-        dnew = dnew - D(kold)
+        Rgrn(new) = Rgrn(new) + S(n)*R(n)
+        Sice(new) = Sice(new) + S(n)
+        Sliq(new) = Sliq(new) + W(n)
+        U(new) = U(new) + E(n)
+        dnew = dnew - D(n)
         exit
       else
         ! Some snow from old layer fills new layer
-        wt = dnew / D(kold)
-        Rgrn(knew) = Rgrn(knew) + wt*S(kold)*R(kold)
-        Sice(knew) = Sice(knew) + wt*S(kold) 
-        Sliq(knew) = Sliq(knew) + wt*W(kold)
-        U(knew) = U(knew) + wt*E(kold)
-        D(kold) = (1 - wt)*D(kold)
-        E(kold) = (1 - wt)*E(kold)
-        S(kold) = (1 - wt)*S(kold)
-        W(kold) = (1 - wt)*W(kold)
-        knew = knew + 1
-        if (knew > Nsnow) exit
-        dnew = Dsnw(knew)
+        wt = dnew / D(n)
+        Rgrn(new) = Rgrn(new) + wt*S(n)*R(n)
+        Sice(new) = Sice(new) + wt*S(n) 
+        Sliq(new) = Sliq(new) + wt*W(n)
+        U(new) = U(new) + wt*E(n)
+        D(n) = (1 - wt)*D(n)
+        E(n) = (1 - wt)*E(n)
+        S(n) = (1 - wt)*S(n)
+        W(n) = (1 - wt)*W(n)
+        new = new + 1
+        if (new > Nsnow) exit
+        dnew = Dsnw(new)
       end if
     end do
   end do
 
   ! Diagnose snow layer temperatures
-  do k = 1, Nsnow
-    csnow(k) = Sice(k)*hcap_ice + Sliq(k)*hcap_wat
-    Tsnow(k) = Tm + U(k) / csnow(k)
-    Rgrn(k) = Rgrn(k) / Sice(k)
+  do n = 1, Nsnow
+    csnow(n) = Sice(n)*hcap_ice + Sliq(n)*hcap_wat
+    Tsnow(n) = Tm + U(n) / csnow(n)
+    Rgrn(n) = Rgrn(n) / Sice(n)
   end do
 
   ! Drain, retain or freeze snow in layers
 #if HYDROL == 0
   ! Free-draining snow, no retention or freezing 
   Wflx(1) = Roff
-  do k = 1, Nsnow
-    Roff = Roff + Sliq(k) / dt
-    Sliq(k) = 0
-    if (k < Nsnow) Wflx(k+1) = Roff
+  do n = 1, Nsnow
+    Roff = Roff + Sliq(n) / dt
+    Sliq(n) = 0
+    if (n < Nsnow) Wflx(n+1) = Roff
   end do
-#endif
-#if HYDROL == 1
+#elif HYDROL == 1
   ! Bucket storage 
   if (maxval(Sliq)>0 .or. Rf>0) then
-  do k = 1, Nsnow
-    phi(k) = 1 - Sice(k)/(rho_ice*Dsnw(k))
-    SliqMax = rho_wat*Dsnw(k)*phi(k)*Wirr
-    Sliq(k) = Sliq(k) + Roff*dt
-    Wflx(k) = Roff
+  do n = 1, Nsnow
+    phi(n) = 1 - Sice(n)/(rho_ice*Dsnw(n))
+    if (phi(n) < 0) phi(n) = 0
+    SliqMax = rho_wat*Dsnw(n)*phi(n)*Wirr
+    Sliq(n) = Sliq(n) + Roff*dt
+    Wflx(n) = Roff
     Roff = 0
-    if (Sliq(k) > SliqMax) then       ! Liquid capacity exceeded
-      Roff = (Sliq(k) - SliqMax)/dt   ! so drainage to next layer
-      Sliq(k) = SliqMax
+    if (Sliq(n) > SliqMax) then       ! Liquid capacity exceeded
+      Roff = (Sliq(n) - SliqMax)/dt   ! so drainage to next layer
+      Sliq(n) = SliqMax
     end if
-    csnow(k) = Sice(k)*hcap_ice + Sliq(k)*hcap_wat
-    coldcont = csnow(k)*(Tm - Tsnow(k))
+    csnow(n) = Sice(n)*hcap_ice + Sliq(n)*hcap_wat
+    coldcont = csnow(n)*(Tm - Tsnow(n))
     if (coldcont > 0) then            ! Liquid can freeze
-      dSice = min(Sliq(k), coldcont/Lf)
-      Sliq(k) = Sliq(k) - dSice
-      Sice(k) = Sice(k) + dSice
-      Tsnow(k) = Tsnow(k) + Lf*dSice/csnow(k)
+      dSice = min(Sliq(n), coldcont/Lf)
+      Sliq(n) = Sliq(n) - dSice
+      Sice(n) = Sice(n) + dSice
+      Tsnow(n) = Tsnow(n) + Lf*dSice/csnow(n)
     end if
   end do
   end if
-#endif
-#if HYDROL == 2
+#elif HYDROL == 2
   ! Gravitational drainage 
   if (maxval(Sliq)>0 .or. Rf>0) then
   Qw(:) = 0
   Qw(1) = Rf/rho_wat
   Roff = 0
-  do k = 1, Nsnow
-    ksat(k) = 0.31*(rho_wat*g/mu_wat)*Rgrn(k)**2*exp(-7.8*Sice(k)/(rho_wat*Dsnw(k)))
-    phi(k) = 1 - Sice(k)/(rho_ice*Dsnw(k))
-    thetar(k) = Wirr*phi(k)
-    thetaw(k) = Sliq(k)/(rho_wat*Dsnw(k))
-    if (thetaw(k)>phi(k)) then
-      Roff = Roff + rho_wat*Dsnw(k)*(thetaw(k) - phi(k))/dt
-      thetaw(k) = phi(k)
+  thetaw(:) = 0
+  do n = 1, Nsnow
+    ksat(n) = 0.31*(rho_wat*g/mu_wat)*Rgrn(n)**2*exp(-7.8*Sice(n)/(rho_wat*Dsnw(n)))
+    phi(n) = 1 - Sice(n)/(rho_ice*Dsnw(n))
+    thetar(n) = Wirr*phi(n)
+    thetaw(n) = Sliq(n)/(rho_wat*Dsnw(n))
+    if (thetaw(n)>phi(n)) then
+      Roff = Roff + rho_wat*Dsnw(n)*(thetaw(n) - phi(n))/dt
+      thetaw(n) = phi(n)
     end if
   end do
   dth = 0.1*dt
@@ -439,24 +469,24 @@ if (snd > 0) then  ! Existing or new snowpack
         Qw(2) = ksat(1)*((thetaw(1) - thetar(1))/(phi(1) - thetar(1)))**3
       end if
       rhs(1) = (thetaw(1) - theta0(1))/dth + (Qw(2) - Qw(1))/Dsnw(1)
-      do k = 2, Nsnow
-        if (thetaw(k-1) > thetar(k-1))  &
-          a(k) = - 3*ksat(k-1)*(thetaw(k-1) - thetar(k-1))**2/(phi(k-1) - thetar(k-1))**3/Dsnw(k-1)
-        if (thetaw(k) > thetar(k)) then
-          b(k) = 1/dth + 3*ksat(k)*(thetaw(k) - thetar(k))**2/(phi(k) - thetar(k))**3/Dsnw(k)
-          Qw(k+1) = ksat(k)*((thetaw(k) - thetar(k))/(phi(k) - thetar(k)))**3
+      do n = 2, Nsnow
+        if (thetaw(n-1) > thetar(n-1))  &
+          a(n) = - 3*ksat(n-1)*(thetaw(n-1) - thetar(n-1))**2/(phi(n-1) - thetar(n-1))**3/Dsnw(n-1)
+        if (thetaw(n) > thetar(n)) then
+          b(n) = 1/dth + 3*ksat(n)*(thetaw(n) - thetar(n))**2/(phi(n) - thetar(n))**3/Dsnw(n)
+          Qw(n+1) = ksat(n)*((thetaw(n) - thetar(n))/(phi(n) - thetar(n)))**3
         end if
-        rhs(k) = (thetaw(k) - theta0(k))/dth + (Qw(k+1) - Qw(k))/Dsnw(k)
+        rhs(n) = (thetaw(n) - theta0(n))/dth + (Qw(n+1) - Qw(n))/Dsnw(n)
       end do
       dtheta(1) = - rhs(1)/b(1)
-      do k = 2, Nsnow
-        dtheta(k) = - (a(k)*dtheta(k-1) + rhs(k))/b(k)
+      do n = 2, Nsnow
+        dtheta(n) = - (a(n)*dtheta(n-1) + rhs(n))/b(n)
       end do 
-      do k = 1, Nsnow
-        thetaw(k) = thetaw(k) + dtheta(k)
-        if (thetaw(k) > phi(k)) then
-          Qw(k+1) = Qw(k+1) + (thetaw(k) - phi(k))*Dsnw(k)/dth
-          thetaw(k) = phi(k)
+      do n = 1, Nsnow
+        thetaw(n) = max(thetaw(n) + dtheta(n), 0.)
+        if (thetaw(n) > phi(n)) then
+          Qw(n+1) = Qw(n+1) + (thetaw(n) - phi(n))*Dsnw(n)/dth
+          thetaw(n) = phi(n)
         endif
       end do
     end do
@@ -464,19 +494,21 @@ if (snd > 0) then  ! Existing or new snowpack
     Roff = Roff + rho_wat*Qw(Nsnow+1)/10
   end do
   Sliq(:) = rho_wat*Dsnw(:)*thetaw(:)
-  do k = 1, Nsnow
-    csnow(k) = Sice(k)*hcap_ice + Sliq(k)*hcap_wat
-    coldcont = csnow(k)*(Tm - Tsnow(k))
+  do n = 1, Nsnow
+    csnow(n) = Sice(n)*hcap_ice + Sliq(n)*hcap_wat
+    coldcont = csnow(n)*(Tm - Tsnow(n))
     if (coldcont > 0) then            ! Liquid can freeze
-      dSice = min(Sliq(k), coldcont/Lf)
-      Sliq(k) = Sliq(k) - dSice
-      Sice(k) = Sice(k) + dSice
-      Tsnow(k) = Tsnow(k) + Lf*dSice/csnow(k)
+      dSice = min(Sliq(n), coldcont/Lf)
+      Sliq(n) = Sliq(n) - dSice
+      Sice(n) = Sice(n) + dSice
+      Tsnow(n) = Tsnow(n) + Lf*dSice/csnow(n)
     end if
   end do
   end if
+#else
+  stop 'Unknown option HYDROL'
 #endif
-snw = sum(Sice(:)) + sum(Sliq(:))
 end if ! Existing or new snowpack
+snw = sum(Sice(:)) + sum(Sliq(:))
 
 end subroutine SNOW

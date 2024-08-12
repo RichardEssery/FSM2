@@ -58,8 +58,7 @@ real, intent(out) :: &
   ksnow(Nsmax),      &! Thermal conductivity of snow layers (W/m/K)
   ksoil(Nsoil)        ! Thermal conductivity of soil layers (W/m/K)
 
-integer :: &
-  k                   ! Level counter
+integer :: n          ! Level counter
 
 real :: &
   dPsidT,            &! d(ice potential)/dT (m/K)
@@ -79,38 +78,42 @@ real :: &
   Tmax                ! Maximum temperature for frozen soil moisture (K)
 
 ! Thermal conductivity of snow
-ksnow = kfix
-#if CONDCT == 1
-do k = 1, Nsnow
+ksnow(:) = kfix
+#if CONDCT == 0
+! Fixed snow thermal conductivity
+#elif CONDCT == 1
+do n = 1, Nsnow
   rhos = rhof
-#if DENSTY == 1
-  if (Dsnw(k) > epsilon(Dsnw)) rhos = (Sice(k) + Sliq(k)) / Dsnw(k)
+#if DENSTY != 0
+  if (Dsnw(n) > epsilon(Dsnw)) rhos = (Sice(n) + Sliq(n)) / Dsnw(n)
 #endif
-  ksnow(k) = 2.224*(rhos/rho_wat)**1.885
+  ksnow(n) = 2.224*(rhos/rho_wat)**1.885
 end do
+#else
+stop 'Unknown option CONDCT'
 #endif
 
 ! Heat capacity and thermal conductivity of soil
 dPsidT = - rho_ice*Lf/(rho_wat*g*Tm)
-do k = 1, Nsoil
-  csoil(k) = hcap_soil*Dzsoil(k)
-  ksoil(k) = hcon_soil
-  if (Vsmc(k) > epsilon(Vsmc)) then
+do n = 1, Nsoil
+  csoil(n) = hcap_soil*Dzsoil(n)
+  ksoil(n) = hcon_soil
+  if (Vsmc(n) > epsilon(Vsmc)) then
     dthudT = 0
-    sthu = Vsmc(k)
+    sthu = Vsmc(n)
     sthf = 0
-    Tc = Tsoil(k) - Tm
-    Tmax = Tm + (sathh/dPsidT)*(Vsat/Vsmc(k))**b
-    if (Tsoil(k) < Tmax) then
+    Tc = Tsoil(n) - Tm
+    Tmax = Tm + (sathh/dPsidT)*(Vsat/Vsmc(n))**b
+    if (Tsoil(n) < Tmax) then
       dthudT = (-dPsidT*Vsat/(b*sathh)) * (dPsidT*Tc/sathh)**(-1/b - 1)
       sthu = Vsat*(dPsidT*Tc/sathh)**(-1/b)
-      sthu = min(sthu, Vsmc(k))
-      sthf = (Vsmc(k) - sthu)*rho_wat/rho_ice
+      sthu = min(sthu, Vsmc(n))
+      sthf = (Vsmc(n) - sthu)*rho_wat/rho_ice
     end if
-    Mf = rho_ice*Dzsoil(k)*sthf
-    Mu = rho_wat*Dzsoil(k)*sthu
-    csoil(k) = hcap_soil*Dzsoil(k) + hcap_ice*Mf + hcap_wat*Mu +       &
-               rho_wat*Dzsoil(k)*((hcap_wat - hcap_ice)*Tc + Lf)*dthudT
+    Mf = rho_ice*Dzsoil(n)*sthf
+    Mu = rho_wat*Dzsoil(n)*sthu
+    csoil(n) = hcap_soil*Dzsoil(n) + hcap_ice*Mf + hcap_wat*Mu +       &
+               rho_wat*Dzsoil(n)*((hcap_wat - hcap_ice)*Tc + Lf)*dthudT
     Smf = rho_ice*sthf/(rho_wat*Vsat)
     Smu = sthu/Vsat
     thice = 0
@@ -119,8 +122,8 @@ do k = 1, Nsoil
     if (Smu > 0) thwat = Vsat*Smu/(Smu + Smf)
     hcon_sat = hcon_soil*(hcon_wat**thwat)*(hcon_ice**thice) /         &
               (hcon_air**Vsat)
-    ksoil(k) = (hcon_sat - hcon_soil)*(Smf + Smu) + hcon_soil
-    if (k == 1) gs1 = gsat*max((Smu*Vsat/Vcrit)**2, 1.)
+    ksoil(n) = (hcon_sat - hcon_soil)*(Smf + Smu) + hcon_soil
+    if (n == 1) gs1 = gsat*max((Smu*Vsat/Vcrit)**2, 1.)
   end if
 end do
 

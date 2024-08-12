@@ -13,6 +13,7 @@ real :: &
   x,                 &! (1 - 16*z/L)^(1/4)
   zeta                ! z/L
 zeta = z*rL
+zeta = max(min(zeta,1.),-2.)
 if (zeta > 0) then
   psim = -5*zeta
 else
@@ -30,6 +31,7 @@ real :: &
   x,                 &! (1 - 16*z/L)^(1/4)
   zeta                ! z/L
 zeta = z*rL
+zeta = max(min(zeta,1.),-2.)
 if (zeta > 0) then
   psih = -5*zeta
 else

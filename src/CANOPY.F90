@@ -29,7 +29,7 @@ real, intent(out) :: &
   lveg(Ncnpy),       &! Canopy layer vegetation area indices
   Scap(Ncnpy),       &! Canopy layer snow capacities (kg/m^2)
   Tveg0(Ncnpy)        ! Vegetation temperatures at start of timestep (K)
-
+  
 #if CANMOD == 1
 lveg(1) = VAI
 #endif
@@ -38,9 +38,14 @@ lveg(1) = fvg1*VAI
 lveg(2) = (1 - fvg1)*VAI
 #endif
 cveg(:) = cvai*lveg(:) + hcap_ice*Sveg(:)
-Scap = svai*lveg(:)
 fcans(:) = 0
-if (VAI > epsilon(VAI)) fcans(:) = (Sveg(:)/Scap(:))**0.67
+Scap(:) = 0
+if (VAI > 0) then
+  Scap(:) = svai*lveg(:)
+  if (svai > 0) fcans(:) = (Sveg(:)/Scap(:))**0.67
+end if
+where(fcans > 1) fcans = 1
+
 Tveg0 = Tveg
 
 end subroutine CANOPY

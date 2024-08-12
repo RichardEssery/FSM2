@@ -6,8 +6,8 @@ subroutine FSM2_TIMESTEP(dt,elev,zT,zU,                                &
                          alb0,vegh,VAI,                                &
                          albs,Tsrf,Dsnw,Nsnow,Qcan,Rgrn,Sice,Sliq,     &
                          Sveg,Tcan,Tsnow,Tsoil,Tveg,Vsmc,              &
-                         H,LE,LWout,LWsub,Melt,Roff,snd,snw,subl,svg,  &
-                         SWout,SWsub,Usub,Wflx)
+                         fsnow,H,LE,LWout,LWsub,Melt,Roff,snd,snw,     &
+                         subl,svg,SWout,SWsub,Tsub,Usub,Wflx)
 
 use LAYERS, only: &
   Ncnpy,             &! Number of canopy layers
@@ -63,6 +63,7 @@ real, intent(inout) :: &
 
 ! Diagnostics
 real, intent(out) :: &
+  fsnow,             &! Ground snowcover fraction
   H,                 &! Sensible heat flux to the atmosphere (W/m^2)
   LE,                &! Latent heat flux to the atmosphere (W/m^2)
   LWout,             &! Outgoing LW radiation (W/m^2)
@@ -75,6 +76,7 @@ real, intent(out) :: &
   svg,               &! Total snow mass on vegetation (kg/m^2)
   SWout,             &! Outgoing SW radiation (W/m^2)
   SWsub,             &! Subcanopy downward SW radiation (W/m^2)
+  Tsub,              &! Subcanopy air temperature (K)
   Usub,              &! Subcanopy wind speed (m/s)
   Wflx(Nsmax)         ! Water flux into snow layer (kg/m^2/s)
 
@@ -89,7 +91,6 @@ real :: &
 
 ! Snow properties
 real :: &
-  fsnow,             &! Ground snowcover fraction
   ksnow(Nsmax)        ! Thermal conductivities of snow layers (W/m/K)
 
 ! Surface properties
@@ -126,9 +127,9 @@ call THERMAL(Dsnw,Nsnow,Sice,Sliq,Tsnow,Tsoil,Vsmc,csoil,Ds1,          &
 call SRFEBAL(cveg,Ds1,dt,fcans,fsnow,gs1,ks1,lveg,LW,Ps,Qa,            &
              SWsrf,Sveg,SWveg,Ta,tdif,Ts1,Tveg0,Ua,VAI,vegh,zT,zU,     &
              Tsrf,Qcan,Sice,Tcan,Tveg,                                 &
-             Esrf,Eveg,Gsrf,H,LE,LWout,LWsub,Melt,subl,Usub)
+             Esrf,Eveg,Gsrf,H,LE,LWout,LWsub,Melt,subl,Tsub,Usub)
 
-call INTERCEPT(dt,cveg,Eveg,Scap,Sf,Sveg,Tveg,drip,svg,unload)
+call INTERCEPT(dt,cveg,Eveg,lveg,Scap,Ta,Ua,Sf,Sveg,Tveg,drip,svg,unload)
 
 call SNOW(dt,drip,Esrf,Gsrf,ksnow,ksoil,Melt,Rf,Sf,Ta,trans,Tsrf,unload, &
           Nsnow,Dsnw,Rgrn,Sice,Sliq,Tsnow,Tsoil,Gsoil,Roff,snd,snw,Wflx)

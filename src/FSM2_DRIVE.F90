@@ -1,7 +1,7 @@
 !-----------------------------------------------------------------------
-! Read and downscale meteorological driving data
+! Read meteorological driving data and partition SW radiation
 !-----------------------------------------------------------------------
-subroutine FSM2_DRIVE(Ncols,Nrows,fsky,lat,noon,                       &
+subroutine FSM2_DRIVE(lat,noon,                                        &
                       year,month,day,hour,elev,EoF,                    &
                       LW,Ps,Qa,Rf,Sdif,Sdir,Sf,Ta,Ua)  
   
@@ -16,17 +16,16 @@ use CONSTANTS, only: &
 
 use IOUNITS, only: &
   umet                ! Meteorological driving file unit number
+  
+use PARAMETERS, only: &
+  Pmlt,              &! Precipitation multiplier for ensemble generation
+  Tadd                ! Temperature offset for ensemble generation (K)
 
 implicit none
 
-integer,intent(in) :: &
-  Ncols,             &! Number of columns in grid
-  Nrows               ! Number of rows in grid 
-
 real, intent(in) :: &
   lat,               &! Latitude (radians)
-  noon,              &! Time of solar noon (hour)
-  fsky(Ncols,Nrows)   ! Skyview not obstructed by remote vegetation
+  noon                ! Time of solar noon (hour)
 
 integer,intent(out) :: &
   year,              &! Year
@@ -39,52 +38,58 @@ logical, intent(out) :: &
 real, intent(out) :: &
   elev,              &! Solar elevation (radians)
   hour,              &! Hour of day
-  LW(Ncols,Nrows),   &! Incoming longwave radiation (W/m^2)
-  Ps(Ncols,Nrows),   &! Surface pressure (Pa)
-  Qa(Ncols,Nrows),   &! Specific humidity (kg/kg)
-  Rf(Ncols,Nrows),   &! Rainfall rate (kg/m^2/s)
-  Sdif(Ncols,Nrows), &! Diffuse shortwave radiation (W/m^2)
-  Sdir(Ncols,Nrows), &! Direct-beam shortwave radiation (W/m^2)
-  Sf(Ncols,Nrows),   &! Snowfall rate (kg/m^2/s)
-  Ta(Ncols,Nrows),   &! Air temperature (K)
-  Ua(Ncols,Nrows)     ! Wind speed (m/s)
+  LW,                &! Incoming longwave radiation (W/m^2)
+  Ps,                &! Surface pressure (Pa)
+  Qa,                &! Specific humidity (kg/kg)
+  Rf,                &! Rainfall rate (kg/m^2/s)
+  Sdif,              &! Diffuse shortwave radiation (W/m^2)
+  Sdir,              &! Direct-beam shortwave radiation (W/m^2)
+  Sf,                &! Snowfall rate (kg/m^2/s)
+  Ta,                &! Air temperature (K)
+  Ua                  ! Wind speed (m/s)
 
 real :: &
   azim,              &! Solar azimuth (radians)
   dfrac,             &! Diffuse fraction of shortwave radiation
   es,                &! Saturation vapour pressure (Pa)
+  fs,                &! Snowfall fraction
   Kt,                &! Sky clearness parameter
+  Pr,                &! Total precipitation (kg/m^2/s)
+  Qs,                &! Saturation specific humidity
   RH,                &! Relative humidity (%)
   SW,                &! Incoming shortwave radiation (W/m^2)
   Tc                  ! Temperature (C)
 
 #if DRIV1D == 1
 ! FSM driving data
-read(umet,*,end=1) year,month,day,hour,SW,LW(1,1),Sf(1,1),Rf(1,1),     &
-                   Ta(1,1),RH,Ua(1,1),Ps(1,1)
+read(umet,*,end=1) year,month,day,hour,SW,LW,Sf,Rf,Ta,RH,Ua,Ps
 ! Convert relative to specific humidity
-Tc = Ta(1,1) - Tm
+Tc = Ta - Tm
 es = e0*exp(17.5043*Tc/(241.3 + Tc))
-Qa(1,1) = (RH/100)*eps*es/Ps(1,1)
+Qa = (RH/100)*eps*es/Ps
 #endif
 #if DRIV1D == 2
 ! ESM-SnowMIP driving data
-read(umet,*,end=1) year,month,day,hour,SW,LW(1,1),Rf(1,1),Sf(1,1),     &
-                   Ta(1,1),Qa(1,1),RH,Ua(1,1),Ps(1,1)
+read(umet,*,end=1) year,month,day,hour,SW,LW,Rf,Sf,Ta,Qa,RH,Ua,Ps
 #endif
 
 ! Lower limit on wind speed
-Ua(1,1) = max(Ua(1,1), 0.1)
+Ua = max(Ua, 0.1)
 
-! Copy point meteorological data to grid without downscaling
-LW = LW(1,1)
-Ps = Ps(1,1)
-Qa = Qa(1,1)
-Rf = Rf(1,1)
-Sf = Sf(1,1)
-Ta = Ta(1,1)
-Ua = Ua(1,1)
-
+#if ENSMBL == 1
+! Perturbed driving data
+Ta = Ta + Tadd
+Pr = Pmlt*(Rf + Sf)
+Tc = Ta - Tm
+es = e0*exp(17.5043*Tc/(241.3 + Tc))
+Qs = eps*es/Ps
+Qa = min(Qa,Qs)
+fs = 1 - 0.5*Tc
+fs = min(1.,max(fs,0.))
+Rf = (1 - fs)*Pr
+Sf = fs*Pr
+#endif
+ 
 #if SWPART == 0
 ! All SW radiation assumed to be diffuse
 elev = 0
@@ -102,11 +107,6 @@ if (Kt > 0.8)  dfrac = 0.165
 Sdif = dfrac*SW
 Sdir = (1 - dfrac)*SW
 #endif
-
-! Shading by remote vegetation
-LW = fsky*LW + (1 - fsky)*sb*Ta**4
-Sdif = fsky*Sdif
-Sdir = fsky*Sdir  ! Replace with direct-beam transmittance
 
 return
 

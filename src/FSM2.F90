@@ -51,8 +51,8 @@ implicit none
 
 ! Grid dimensions
 integer :: &
-  Ncols,             &! Number of columns in grid
-  Nrows               ! Number of rows in grid 
+  n,                 &! Layer/point counter
+  Npnts               ! Number of points
 
 ! Site characteristics
 real :: &
@@ -73,66 +73,66 @@ real :: &
   hour,              &! Hour of day
   zT,                &! Temperature and humidity measurement height (m)
   zU                  ! Wind speed measurement height (m)
-real, allocatable :: &
-  LW(:,:),           &! Incoming longwave radiation (W/m^2)
-  Ps(:,:),           &! Surface pressure (Pa)
-  Qa(:,:),           &! Specific humidity (kg/kg)
-  Rf(:,:),           &! Rainfall rate (kg/m^2/s)
-  Sdif(:,:),         &! Diffuse shortwave radiation (W/m^2)
-  Sdir(:,:),         &! Direct-beam shortwave radiation (W/m^2)
-  Sf(:,:),           &! Snowfall rate (kg/m^2/s)
-  Ta(:,:),           &! Air temperature (K)
-  trans(:,:),        &! Wind-blown snow transport rate (kg/m^2/s)
-  Ua(:,:)             ! Wind speed (m/s)
+real :: &
+  LW,                &! Incoming longwave radiation (W/m^2)
+  Ps,                &! Surface pressure (Pa)
+  Qa,                &! Specific humidity (kg/kg)
+  Rf,                &! Rainfall rate (kg/m^2/s)
+  Sdif,              &! Diffuse shortwave radiation (W/m^2)
+  Sdir,              &! Direct-beam shortwave radiation (W/m^2)
+  Sf,                &! Snowfall rate (kg/m^2/s)
+  Ta,                &! Air temperature (K)
+  trans,             &! Wind-blown snow transport rate (kg/m^2/s)
+  Ua                  ! Wind speed (m/s)
 
 ! Model state variables  
 integer, allocatable :: &
-  Nsnow(:,:)          ! Number of snow layers
+  Nsnow(:)            ! Number of snow layers
 real, allocatable :: &
-  albs(:,:),         &! Snow albedo
-  Tsrf(:,:),         &! Snow/ground surface temperature (K)
-  Dsnw(:,:,:),       &! Snow layer thicknesses (m)
-  Qcan(:,:,:),       &! Canopy air space humidities
-  Rgrn(:,:,:),       &! Snow layer grain radii (m)
-  Sice(:,:,:),       &! Ice content of snow layers (kg/m^2)
-  Sliq(:,:,:),       &! Liquid content of snow layers (kg/m^2)
-  Sveg(:,:,:),       &! Snow mass on vegetation layers (kg/m^2)
-  Tcan(:,:,:),       &! Canopy air space temperatures (K)
-  Tsnow(:,:,:),      &! Snow layer temperatures (K)
-  Tsoil(:,:,:),      &! Soil layer temperatures (K)
-  Tveg(:,:,:),       &! Vegetation layer temperatures (K)
-  Vsmc(:,:,:),       &! Volumetric moisture content of soil layers
+  albs(:),           &! Snow albedo
+  Tsrf(:),           &! Snow/ground surface temperature (K)
+  Dsnw(:,:),         &! Snow layer thicknesses (m)
+  Qcan(:,:),         &! Canopy air space humidities
+  Rgrn(:,:),         &! Snow layer grain radii (m)
+  Sice(:,:),         &! Ice content of snow layers (kg/m^2)
+  Sliq(:,:),         &! Liquid content of snow layers (kg/m^2)
+  Sveg(:,:),         &! Snow mass on vegetation layers (kg/m^2)
+  Tcan(:,:),         &! Canopy air space temperatures (K)
+  Tsnow(:,:),        &! Snow layer temperatures (K)
+  Tsoil(:,:),        &! Soil layer temperatures (K)
+  Tveg(:,:),         &! Vegetation layer temperatures (K)
+  Vsmc(:,:),         &! Volumetric moisture content of soil layers
   fsat(:),           &! Initial soil layer moisture/saturation
   Tprf(:)             ! Initial soil layer temperatures (K)
 
 ! Diagnostics
 real, allocatable :: &
-  H(:,:),            &! Sensible heat flux to the atmosphere (W/m^2)
-  LE(:,:),           &! Latent heat flux to the atmosphere (W/m^2)
-  LWout(:,:),        &! Outgoing LW radiation (W/m^2)
-  LWsub(:,:),        &! Subcanopy downward LW radiation (W/m^2)
-  Melt(:,:),         &! Surface melt rate (kg/m^2/s)
-  Roff(:,:),         &! Runoff from snow (kg/m^2/s)
-  snd(:,:),          &! Snow depth (m)
-  snw(:,:),          &! Total snow mass on ground (kg/m^2) 
-  subl(:,:),         &! Sublimation rate (kg/m^2/s)
-  svg(:,:),          &! Total snow mass on vegetation (kg/m^2)
-  SWout(:,:),        &! Outgoing SW radiation (W/m^2)
-  SWsub(:,:),        &! Subcanopy downward SW radiation (W/m^2)
-  Usub(:,:),         &! Subcanopy wind speed (m/s)
-  Wflx(:,:,:)         ! Water flux into snow layer (kg/m^2/s)
+  fsnow(:),          &! Ground snowcover fraction
+  H(:),              &! Sensible heat flux to the atmosphere (W/m^2)
+  LE(:),             &! Latent heat flux to the atmosphere (W/m^2)
+  LWout(:),          &! Outgoing LW radiation (W/m^2)
+  LWsub(:),          &! Subcanopy downward LW radiation (W/m^2)
+  Melt(:),           &! Surface melt rate (kg/m^2/s)
+  Roff(:),           &! Runoff from snow (kg/m^2/s)
+  snd(:),            &! Snow depth (m)
+  snw(:),            &! Total snow mass on ground (kg/m^2) 
+  subl(:),           &! Sublimation rate (kg/m^2/s)
+  svg(:),            &! Total snow mass on vegetation (kg/m^2)
+  SWout(:),          &! Outgoing SW radiation (W/m^2)
+  SWsub(:),          &! Subcanopy downward SW radiation (W/m^2)
+  Tsub(:),           &! Subcanopy air temperature (K)
+  Usub(:),           &! Subcanopy wind speed (m/s)
+  Wflx(:,:)           ! Water flux into snow layer (kg/m^2/s)
 
 ! Vegetation characteristics
 character(len=70) :: &
   alb0_file,         &! Snow-free ground albedo map file name
-  fsky_file,         &! Skyview fraction map file name
   vegh_file,         &! Canopy height map file name
   VAI_file            ! Vegetation area index map file name
 real, allocatable :: &
-  alb0(:,:),         &! Snow-free ground albedo
-  fsky(:,:),         &! Skyview not obstructed by remote vegetation
-  vegh(:,:),         &! Canopy height (m)
-  VAI(:,:)            ! Vegetation area index
+  alb0(:),           &! Snow-free ground albedo
+  vegh(:),           &! Canopy height (m)
+  VAI(:)              ! Vegetation area index
 
 ! Start and dump file names
 character(len=70) :: &
@@ -147,38 +147,28 @@ integer :: &
   status,            &! Error status
   varid(17)           ! Variable IDs
 
-! Counters
-integer :: &
-  i,                 &! Grid row counter
-  j,                 &! Grid column counter
-  k                   ! Soil layer counter
-
 namelist    /drive/ met_file,dt,lat,noon,zT,zU
-namelist /gridpnts/ Ncols,Nrows,Nsmax,Nsoil
+namelist /gridpnts/ Npnts,Nsmax,Nsoil
 namelist /gridlevs/ Dzsnow,Dzsoil,fvg1,zsub
 namelist  /initial/ fsat,Tprf,start_file
 namelist  /outputs/ dump_file,runid
-namelist      /veg/ alb0,fsky,vegh,VAI,  &
-                    alb0_file,fsky_file,vegh_file,VAI_file
-
-#if SETPAR == 1
+namelist      /veg/ alb0,vegh,VAI,alb0_file,vegh_file,VAI_file
+                    
 call FSM2_PARAMS
-#endif
 
 ! Grid dimensions
-Ncols = 1
-Nrows = 1
-Nsmax = 3
-Nsoil = 4
-read(5,gridpnts)
-
-! Canopy, snow and soil layers
 #if CANMOD == 1
 Ncnpy = 1
 #endif
 #if CANMOD == 2
 Ncnpy = 2
 #endif
+Npnts = 1
+Nsmax = 3
+Nsoil = 4
+read(5,gridpnts)
+
+! Canopy, snow and soil layers
 fvg1 = 0.5
 zsub = 1.5
 allocate(Dzsnow(Nsmax))
@@ -199,38 +189,22 @@ open(umet, file = met_file)
 read(umet,*) year,month,day,hour
 rewind(umet)
 lat = (3.14159/180)*lat
+trans = 0  ! no snow transport
 
-! Allocate driving data arrays
-allocate(LW(Ncols,Nrows))
-allocate(Ps(Ncols,Nrows))
-allocate(Qa(Ncols,Nrows))
-allocate(Rf(Ncols,Nrows))
-allocate(Sdif(Ncols,Nrows))
-allocate(Sdir(Ncols,Nrows))
-allocate(Sf(Ncols,Nrows))
-allocate(Ta(Ncols,Nrows))
-allocate(trans(Ncols,Nrows))
-allocate(Ua(Ncols,Nrows))
-trans(:,:) = 0
-
-! Vegetation characteristics from defaults, namelist or named map files
-allocate(alb0(Ncols,Nrows))
-allocate(fsky(Ncols,Nrows))
-allocate(vegh(Ncols,Nrows))
-allocate(VAI(Ncols,Nrows))
+! Vegetation characteristics from defaults, namelist or named files
+allocate(alb0(Npnts))
+allocate(vegh(Npnts))
+allocate(VAI(Npnts))
 alb0_file = 'none'
-fsky_file = 'none'
 vegh_file = 'none'
 VAI_file  = 'none'
 alb0 = 0.2
-fsky = 1
 vegh = 0
 VAI  = 0
 read(5,veg)
-if (alb0_file /= 'none') call FSM2_MAP(alb0_file,Ncols,Nrows,alb0)
-if (fsky_file /= 'none') call FSM2_MAP(fsky_file,Ncols,Nrows,fsky)
-if (vegh_file /= 'none') call FSM2_MAP(vegh_file,Ncols,Nrows,vegh)
-if (VAI_file  /= 'none') call FSM2_MAP(VAI_file,Ncols,Nrows,VAI)
+if (alb0_file /= 'none') call FSM2_VEG(alb0_file,Npnts,alb0)
+if (vegh_file /= 'none') call FSM2_VEG(vegh_file,Npnts,vegh)
+if (VAI_file  /= 'none') call FSM2_VEG(VAI_file,Npnts,VAI)
 
 ! Soil properties
 b = 3.1 + 15.7*fcly - 0.3*fsnd
@@ -241,20 +215,20 @@ Vcrit = Vsat*(sathh/3.364)**(1/b)
 hcon_soil = (hcon_air**Vsat) * ((hcon_clay**fcly)*(hcon_sand**(1 - fcly))**(1 - Vsat))
 
 ! Allocate state variable arrays
-allocate(albs(Ncols,Nrows))
-allocate(Nsnow(Ncols,Nrows))
-allocate(Tsrf(Ncols,Nrows))
-allocate(Dsnw(Nsmax,Ncols,Nrows))
-allocate(Qcan(Ncnpy,Ncols,Nrows))
-allocate(Rgrn(Nsmax,Ncols,Nrows))
-allocate(Sice(Nsmax,Ncols,Nrows))
-allocate(Sliq(Nsmax,Ncols,Nrows))
-allocate(Sveg(Ncnpy,Ncols,Nrows))
-allocate(Tcan(Ncnpy,Ncols,Nrows))
-allocate(Tsnow(Nsmax,Ncols,Nrows))
-allocate(Tsoil(Nsoil,Ncols,Nrows))
-allocate(Tveg(Ncnpy,Ncols,Nrows))
-allocate(Vsmc(Nsoil,Ncols,Nrows))
+allocate(albs(Npnts))
+allocate(Nsnow(Npnts))
+allocate(Tsrf(Npnts))
+allocate(Dsnw(Nsmax,Npnts))
+allocate(Qcan(Ncnpy,Npnts))
+allocate(Rgrn(Nsmax,Npnts))
+allocate(Sice(Nsmax,Npnts))
+allocate(Sliq(Nsmax,Npnts))
+allocate(Sveg(Ncnpy,Npnts))
+allocate(Tcan(Ncnpy,Npnts))
+allocate(Tsnow(Nsmax,Npnts))
+allocate(Tsoil(Nsoil,Npnts))
+allocate(Tveg(Ncnpy,Npnts))
+allocate(Vsmc(Nsoil,Npnts))
 
 ! Default initialization of state variables
 albs  = 0.8
@@ -269,9 +243,9 @@ Tcan  = 285
 Tsnow = 273
 Tveg  = 285
 ! Missing values for vegetation at non-forest points
-do k = 1, Ncnpy
-  where(VAI==0) Sveg(k,:,:) = -999./Ncnpy
-  where(VAI==0) Tveg(k,:,:) = -999
+do n = 1, Ncnpy
+  where(VAI==0) Sveg(n,:) = -999./Ncnpy
+  where(VAI==0) Tveg(n,:) = -999
 end do
 
 ! Initial soil profiles from namelist
@@ -281,11 +255,11 @@ fsat = 0.5
 Tprf = 285
 start_file = 'none'
 read(5,initial)
-do k = 1, Nsoil
-  Tsoil(k,:,:) = Tprf(k)
-  Vsmc(k,:,:) = fsat(k)*Vsat
+do n = 1, Nsoil
+  Tsoil(n,:) = Tprf(n)
+  Vsmc(n,:) = fsat(n)*Vsat
 end do
-Tsrf = Tsoil(1,:,:)
+Tsrf = Tsoil(1,:)
 
 ! Initialize state variables from a named start file
 if (start_file /= 'none') then
@@ -308,20 +282,22 @@ if (start_file /= 'none') then
 end if
 
 ! Allocate diagnostic output arrays
-allocate(H(Ncols,Nrows))
-allocate(LE(Ncols,Nrows))
-allocate(LWout(Ncols,Nrows))
-allocate(LWsub(Ncols,Nrows))
-allocate(Melt(Ncols,Nrows))
-allocate(Roff(Ncols,Nrows))
-allocate(snd(Ncols,Nrows))
-allocate(snw(Ncols,Nrows))
-allocate(subl(Ncols,Nrows))
-allocate(svg(Ncols,Nrows))
-allocate(SWout(Ncols,Nrows))
-allocate(SWsub(Ncols,Nrows))
-allocate(Usub(Ncols,Nrows))
-allocate(Wflx(Nsmax,Ncols,Nrows))
+allocate(fsnow(Npnts))
+allocate(H(Npnts))
+allocate(LE(Npnts))
+allocate(LWout(Npnts))
+allocate(LWsub(Npnts))
+allocate(Melt(Npnts))
+allocate(Roff(Npnts))
+allocate(snd(Npnts))
+allocate(snw(Npnts))
+allocate(subl(Npnts))
+allocate(svg(Npnts))
+allocate(SWout(Npnts))
+allocate(SWsub(Npnts))
+allocate(Tsub(Npnts))
+allocate(Usub(Npnts))
+allocate(Wflx(Nsmax,Npnts))
 
 ! Output files
 dump_file = 'dump'
@@ -329,10 +305,10 @@ runid = 'none'
 read(5,outputs)
 if (runid == 'none') runid = ''
 #if PROFNC == 1
-if (Ncols*Nrows>1) stop 'NetCDF output only available for Nrows = Ncols = 1'
+if (Npnts>1) stop 'NetCDF output only available for Npnts = 1'
 call FSM2_PREPNC(runid,year,month,day,hour,ncid,rec,varid)
 #else
-if (maxval(VAI) > 0) open(ucan, file = trim(runid)//'subc.txt')
+open(ucan, file = trim(runid)//'subc.txt')
 open(uflx, file = trim(runid)//'flux.txt')
 open(usta, file = trim(runid)//'stat.txt')
 #endif
@@ -340,42 +316,34 @@ open(usta, file = trim(runid)//'stat.txt')
 ! Run the model
 EoF = .false.
 do
-  call FSM2_DRIVE(Ncols,Nrows,fsky,lat,noon,                           &
-                  year,month,day,hour,elev,EoF,                        &
+  call FSM2_DRIVE(lat,noon,year,month,day,hour,elev,EoF,               &
                   LW,Ps,Qa,Rf,Sdif,Sdir,Sf,Ta,Ua)  
   if (EoF) goto 1
-  do i = 1, Nrows
-  do j = 1, Ncols
+  do n = 1, Npnts
     call FSM2_TIMESTEP(                                                &
                        ! Driving variables                             &
-                       dt,elev,zT,zU,LW(j,i),Ps(j,i),Qa(j,i),          &
-                       Rf(j,i),Sdif(j,i),Sdir(j,i),Sf(j,i),            &
-                       Ta(j,i),trans(j,i),Ua(j,i),                     &
+                       dt,elev,zT,zU,LW,Ps,Qa,Rf,Sdif,Sdir,Sf,Ta,      &
+                       trans,Ua,                                       &
                        ! Vegetation characteristics                    &
-                       alb0(j,i),vegh(j,i),VAI(j,i),                   &
+                       alb0(n),vegh(n),VAI(n),                         &
                        ! State variables                               &
-                       albs(j,i),Tsrf(j,i),Dsnw(:,j,i),Nsnow(j,i),     &
-                       Qcan(:,j,i),Rgrn(:,j,i),Sice(:,j,i),            &
-                       Sliq(:,j,i),Sveg(:,j,i),Tcan(:,j,i),            &
-                       Tsnow(:,j,i),Tsoil(:,j,i),Tveg(:,j,i),          &
-                       Vsmc(:,j,i),                                    &
+                       albs(n),Tsrf(n),Dsnw(:,n),Nsnow(n), Qcan(:,n),  &
+                       Rgrn(:,n),Sice(:,n),Sliq(:,n),Sveg(:,n),        &
+                       Tcan(:,n),Tsnow(:,n),Tsoil(:,n),Tveg(:,n),      &
+                       Vsmc(:,n),                                      &
                        ! Diagnostics                                   &
-                       H(j,i),LE(j,i),LWout(j,i),LWsub(j,i),           &
-                       Melt(j,i),Roff(j,i),snd(j,i),snw(j,i),          &
-                       subl(j,i),svg(j,i),SWout(j,i),SWsub(j,i),       &
-                       Usub(j,i),Wflx(:,j,i)                           )
-  end do
+                       fsnow(n),H(n),LE(n),LWout(n),LWsub(n),Melt(n),  &
+                       Roff(n),snd(n),snw(n),subl(n),svg(n),SWout(n),  &
+                       SWsub(n),Tsub(n),Usub(n),Wflx(:,n)              )
   end do
 #if PROFNC == 1
-  call FSM2_WRITENC(Dsnw(:,1,1),dt,H(1,1),LE(1,1),LWout(1,1),Melt(1,1),&
-                    ncid,Nsnow(1,1),Rgrn(:,1,1),Roff(1,1),Sice(:,1,1), &
-                    Sliq(:,1,1),snd(1,1),snw(1,1),SWout(1,1),          &
-                    Tsnow(:,1,1),Tsoil(:,1,1),Tsrf(1,1),varid,         &
-                    Wflx(:,1,1),rec) 
+  call FSM2_WRITENC(Dsnw(:,1),dt,H,LE,LWout,Melt,ncid,Nsnow,           &
+                    Rgrn(:,1),Roff,Sice(:,1),Sliq(:,1),snd,snw,SWout,  &
+                    Tsnow(:,1),Tsoil(:,1),Tsrf,varid,Wflx(:,1),rec) 
 #else
-  call FSM2_OUTPUT(Ncols,Nrows,year,month,day,hour,                    &
+  call FSM2_OUTPUT(Npnts,year,month,day,hour,                          &
                    H,LE,LWout,LWsub,Melt,Roff,snd,snw,subl,svg,SWout,  &
-                   SWsub,Tsoil,Tsrf,Tveg,Usub,VAI)
+                   SWsub,Tsoil,Tsrf,Tsub,Tveg,Usub)
 #endif
 end do
 1 continue

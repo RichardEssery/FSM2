@@ -1,10 +1,10 @@
 !-----------------------------------------------------------------------
-! Surface energy balance
+! Surface and canopy energy balance
 !-----------------------------------------------------------------------
 subroutine SRFEBAL(cveg,Ds1,dt,fcans,fsnow,gs1,ks1,lveg,LW,Ps,Qa,      &
                    SWsrf,Sveg,SWveg,Ta,tdif,Ts1,Tveg0,Ua,VAI,vegh,     &
                    zT,zU,Tsrf,Qcan,Sice,Tcan,Tveg,                     &
-                   Esrf,Eveg,Gsrf,H,LE,LWout,LWsub,Melt,subl,Usub)
+                   Esrf,Eveg,Gsrf,H,LE,LWout,LWsub,Melt,subl,Tsub,Usub)
 
 #include "OPTS.h"
 
@@ -80,15 +80,15 @@ real, intent(out) :: &
   LWsub,             &! Subcanopy downward LW radiation (W/m^2)
   Melt,              &! Surface melt rate (kg/m^2/s)
   subl,              &! Sublimation rate (kg/m^2/s)
+  Tsub,              &! Subcanopy air temperature (K)
   Usub,              &! Subcanopy wind speed (m/s)
   Eveg(Ncnpy)         ! Moisture flux from vegetation layers (kg/m^2/s)
 
 integer :: &
-  k,                 &! Canopy layer counter
+  n,                 &! Canopy layer counter
   ne                  ! Energy balance iteration counter
 
 real :: &
-  B,                 &! Kinematic bouyancy flux (Km/s)
   d,                 &! Displacement height (m)
   Dsrf,              &! dQsat/dT at ground surface temperature (1/K)
   dEs,               &! Change in surface moisture flux (kg/m^2/s)
@@ -98,7 +98,7 @@ real :: &
   E,                 &! Moisture flux to the atmosphere (kg/m^2/s)
   ebal,              &! Surface energy balance closure (W/m^2)
   Ecan,              &! Within-canopy moisture flux (kg/m^2/s)
-  fveg,              &! Vegetation weighting
+  fveg,              &! Vegetation fraction
   ga,                &! Aerodynamic conductance to the atmosphere (m/s)
   gc,                &! Conductance within canopy air space (m/s)
   gs,                &! Surface to canopy air space conductance (m/s)
@@ -117,9 +117,7 @@ real :: &
   Ssub,              &! Mass of snow available for sublimation (kg/m^2)
   Uc,                &! Within-canopy wind speed (m/s)
   Uh,                &! Wind speed at canopy top (m/s)
-  usd,               &! Dense canopy friction velocity (m/s)
-  uso,               &! Friction velocity (m/s)
-  ustar,             &! Open friction velocity (m/s)
+  ustar,             &! Friction velocity (m/s)
   wsrf,              &! Surface water availability factor
   zT1,               &! Temperature measurement height with offset (m)
   zU1,               &! Wind measurement height with offset (m)
@@ -147,8 +145,6 @@ real :: &
   f(3*Ncnpy+1),          &! Residuals of energy and mass balance equations
   x(3*Ncnpy+1)            ! Temperature and humidity increments
 
-real RiB
-
 #if ZOFFST == 0
 ! Heights specified above ground
 zU1 = zU
@@ -169,12 +165,9 @@ zh(2) = 0.5*(1 - fvg1)*vegh
 
 ! Roughness lengths
 fveg = 1 - exp(-kext*VAI)
-d = 0.67*fveg*vegh
+d = 0.67*vegh
 z0g = (z0sn**fsnow) * (z0sf**(1 - fsnow))
 z0h = 0.1*z0g
-z0v = ((0.05*vegh)**fveg) * (z0g**(1 - fveg))
-
-d = 0.67*vegh
 z0v = 0.1*vegh
 
 ! Saturation humidity and air density
@@ -187,16 +180,22 @@ rho = Ps/(Rair*Ta)
 if (VAI == 0) then  ! open
 Eveg(:) = 0
 Hveg(:) = 0
+Lcan(:) = 0
+LWsub = LW
+rL = 0
 ustar = vkman*Ua/log(zU1/z0g)
 ga = vkman*ustar/log(zT1/z0h)
-do ne = 1, 20
 
-#if EXCHNG == 1
-  if (ne<10) B = ga*(Tsrf - Ta)
-  rL = -vkman*B/(Ta*ustar**3)
-  rL = max(min(rL,2.),-2.)
+do ne = 1, 10
+#if EXCHNG == 0
+  ! No stability adjustment
+#elif EXCHNG == 1
+  ! Stability adjustment
+  if (ne<8) rL = -vkman*g*ga*(Tsrf - Ta)/(Ta*ustar**3)
   ustar = vkman*Ua/(log(zU1/z0g) - psim(zU1,rL) + psim(z0g,rL))
-  ga = vkman*ustar/(log(zT1/z0h) - psih(zT1,rL) + psih(z0h,rL)) !+ 2/(rho*cp)
+  ga = vkman*ustar/(log(zT1/z0h) - psih(zT1,rL) + psih(z0h,rL))
+#else
+  stop 'Unknown option EXCHNG'
 #endif
 
   ! Surface water availability
@@ -221,7 +220,6 @@ do ne = 1, 20
   dEs = rho*wsrf*ga*Dsrf*dTs
   dGs = 2*ks1*dTs/Ds1 
   dHs = cp*rho*ga*dTs
-
   ! Surface melting
   if (Tsrf + dTs > Tm .and. Sice(1) > 0) then
     Melt = sum(Sice) / dt
@@ -244,82 +242,61 @@ do ne = 1, 20
       dTs = Tm - Tsrf
     end if
   end if
-
+  
   ! Update surface temperature and fluxes
   Esrf = Esrf + dEs
   Gsrf = Gsrf + dGs
   Hsrf = Hsrf + dHs
   Tsrf = Tsrf + dTs
-  ! Diagnostics
   ebal = SWsrf + LW - sb*Tsrf**4 - Gsrf - Hsrf - Lsrf*Esrf - Lf*Melt
-  LWout = sb*Tsrf**4
-  LWsub = LW
-  Usub = (ustar/vkman)*(log(zsub/z0g) - psim(zsub,rL) + psim(z0g,rL))
-
-if (ne>4 .and. abs(ebal)<0.01) exit
+  if (ne>4 .and. abs(ebal)<0.01) exit
+  
 end do
 
 else ! forest
 rL = 0
-usd = vkman*Ua/log((zU1-d)/z0v)
-Kh = vkman*usd*(vegh - d)
-rd = log((zT1-d)/(vegh-d))/(vkman*usd) + vegh*(exp(wcan*(1 - zh(1)/vegh) - 1))/(wcan*Kh)
-uso = vkman*Ua/log(zU1/z0g)
-ro = log(zT1/zh(1))/(vkman*uso)
+ustar = fveg*vkman*Ua/log((zU1-d)/z0v) + (1 - fveg)*vkman*Ua/log(zU1/z0g)
+Kh = vkman*ustar*(vegh - d)
+rd = log((zT1-d)/(vegh-d))/(vkman*ustar) + vegh*(exp(wcan*(1 - zh(1)/vegh) - 1))/(wcan*Kh)
+ro = log(zT1/zh(1))/(vkman*ustar)
 ga = fveg/rd + (1 - fveg)/ro
-do ne = 1, 20
+do ne = 1, 10
   ! Aerodynamic resistance
 #if EXCHNG == 1
-  ustar = fveg*usd + (1 - fveg)*uso
-  if (ne<10) B = ga*(Tcan(1) - Ta)
-  rL = -vkman*B/(Ta*ustar**3)
-  rL = max(min(rL,2.),-2.)
-  usd = vkman*Ua/(log((zu1-d)/z0v) - psim(zU1-d,rL) + psim(z0v,rL))
+  ustar = fveg*vkman*Ua/(log((zu1-d)/z0v) - psim(zU1-d,rL) + psim(z0v,rL)) + &
+          (1 - fveg)*vkman*Ua/(log(zU1/z0g) - psim(zU1,rL) + psim(z0g,rL))
+  if (ne<8) rL = -vkman*g*ga*(Tcan(1) - Ta)/(Ta*ustar**3)
   if (rL > 0) then
-    Kh = vkman*usd*(vegh - d)/(1 + 5*(vegh - d)*rL)
+    Kh = vkman*ustar*(vegh - d)/(1 + 5*(vegh - d)*rL)
   else
-    Kh = vkman*usd*(vegh - d)*sqrt(1 - 16*(vegh - d)*rL)
+    Kh = vkman*ustar*(vegh - d)*sqrt(1 - 16*(vegh - d)*rL)
   end if
-  rd = (log((zT1-d)/(vegh-d)) - psih(zT1-d,rL) + psih(vegh-d,rL))/(vkman*usd) +  &
+  rd = (log((zT1-d)/(vegh-d)) - psih(zT1-d,rL) + psih(vegh-d,rL))/(vkman*ustar) +  &
        vegh*(exp(wcan*(1 - zh(1)/vegh) - 1))/(wcan*Kh)
-  uso = vkman*Ua/(log(zU1/z0g) - psim(zU1,rL) + psim(z0g,rL))
-  ro = (log(zT1/zh(1)) - psih(zT1,rL) + psih(zh(1),rL))/(vkman*uso)
-  ga = fveg/rd + (1 - fveg)/ro !+ 2/(rho*cp)
+  ro = (log(zT1/zh(1)) - psih(zT1,rL) + psih(zh(1),rL))/(vkman*ustar)
+  ga = fveg/rd + (1 - fveg)/ro
 #endif
-  Uh = (usd/vkman)*(log((vegh-d)/z0v) - psim(vegh-d,rl) + psim(z0v,rl))
-  do k = 1, Ncnpy
-    Uc = fveg*exp(wcan*(zh(k)/vegh - 1))*Uh  +   &
-         (1 - fveg)*(uso/vkman)*(log(zh(k)/z0g) - psim(zh(k),rL) + psim(z0g,rL))
-    gv(k) = sqrt(Uc)*lveg(k)/leaf
+  Uh = (ustar/vkman)*(log((vegh-d)/z0v) - psim(vegh-d,rl) + psim(z0v,rl))
+  do n =1, Ncnpy
+    Uc = fveg*exp(wcan*(zh(n)/vegh - 1))*Uh  +   &
+         (1 - fveg)*(ustar/vkman)*(log(zh(n)/z0g) - psim(zh(n),rL) + psim(z0g,rL))
+    gv(n) = sqrt(Uc)*lveg(n)/leaf
   end do
-#if CANMOD == 2
   rd = vegh*exp(wcan)*(exp(-wcan*zh(2)/vegh) - exp(-wcan*zh(1)/vegh))/(wcan*Kh)
-  ro = (log(zh(1)/zh(2)) - psih(zh(1),rL) + psih(zh(2),rL))/(vkman*uso)
+  ro = (log(zh(1)/zh(2)) - psih(zh(1),rL) + psih(zh(2),rL))/(vkman*ustar)
   gc = fveg/rd + (1 - fveg)/ro
-#endif
-  k = Ncnpy
+  n = Ncnpy
   Uc = exp(wcan*(hbas/vegh - 1))*Uh
   rd = log(hbas/z0g)*log(hbas/z0h)/(vkman**2*Uc) +  &
-       vegh*exp(wcan)*(exp(-wcan*hbas/vegh) - exp(-wcan*zh(k)))/(wcan*Kh)
-  ro = (log(zh(k)/z0h) - psih(zh(k),rL) + psih(z0h,rL))/(vkman*uso)
+       vegh*exp(wcan)*(exp(-wcan*hbas/vegh) - exp(-wcan*zh(n)))/(wcan*Kh)
+  ro = (log(zh(n)/z0h) - psih(zh(n),rL) + psih(z0h,rL))/(vkman*ustar)
   gs = fveg/rd + (1 - fveg)/ro
 
-!rd = log((zT1-d)/z0v)/(vkman*usd)  !!!!!!!!!!!!!
-!rd = (log((zT1-d)/(vegh-d)) - psih(zT1-d,rL) + psih(vegh-d,rL))/(vkman*usd) + log(vegh/zh(1))/(vkman*usd)  !!!!!!!!!
-!Uc = fveg*(usd/vkman)*log(zh(k)/z0g) + (1 - fveg)*(uso/vkman)*log(zh(k)/z0g)  !!!!!!!!
-!rd = log(zh(1)/zh(2))/(vkman*usd)  !!!!!!!!!!!!!!!!!!
-!rd = 4*log(zh(k)/z0h)/(vkman*usd)   !!!!!!!!!!!!!!!!!!! 
-
-!ga = (vkman*usd)/(log((zT1-d)/z0v) - psih(zT1-d,rL) + psih(z0v,rL))
-!gv(:) = (vkman*usd)/log(1/0.999)
-!gc = 1
-!gs = (vkman*usd)/log(z0v/z0h)/4
-
   ! Saturation humidity
-  do k = 1, Ncnpy
-    call QSAT(Ps,Tveg(k),Qveg(k))
-    Lcan(k) = Ls
-    if (Tveg(k) > Tm) Lcan(k) = Lv
+  do n =1, Ncnpy
+    call QSAT(Ps,Tveg(n),Qveg(n))
+    Lcan(n) = Ls
+    if (Tveg(n) > Tm) Lcan(n) = Lv
   end do
   Dveg(:) = Lcan(:)*Qveg(:)/(Rwat*Tveg(:)**2)
 
@@ -329,11 +306,11 @@ do ne = 1, 20
   else
     wsrf = fsnow + (1 - fsnow)*gs1/(gs1 + gs)
   end if
-  do k = 1, Ncnpy
-    if (Qcan(k) > Qveg(k)) then
-      wveg(k) = 1
+  do n =1, Ncnpy
+    if (Qcan(n) > Qveg(n)) then
+      wveg(n) = 1
     else
-      wveg(k) = fcans(k) + (1 - fcans(k))*gsnf/(gsnf + gv(k))
+      wveg(n) = fcans(n) + (1 - fcans(n))*gsnf/(gsnf + gv(n))
     end if
   end do
 
@@ -456,7 +433,7 @@ do ne = 1, 20
             + (1 - tdif(2))*sb*Tveg(2)**4 + tdif(2)*sb*Tsrf**4) 
   Rveg(2) = SWveg(2) +                                               & 
             (1 - tdif(2))*(tdif(1)*LW + (1 - tdif(1))*sb*Tveg(1)**4  & 
-               - 2*sb*Tveg(2)**4 + sb*Tsrf**4) 
+               - 2*sb*Tveg(2)**4 + sb*Tsrf**4)
 
 ! Surface energy balance increments without melt
   J(1,1) = - rho*gs*(cp + Lsrf*Dsrf*wsrf) - 4*sb*Tsrf**3 - 2*ks1/Ds1
@@ -615,18 +592,20 @@ do ne = 1, 20
   Gsrf = Gsrf + dGs
   Hsrf = Hsrf + dHs
   Tsrf = Tsrf + dTs
-  ! Diagnostics
   ebal = SWsrf + LWsub - sb*Tsrf**4 - Gsrf - Hsrf - Lsrf*Esrf - Lf*Melt
-  Uc = exp(wcan*(hbas/vegh - 1))*Uh
-  Usub = fveg*Uc*log(zsub/z0g)/log(hbas/z0g) +  &
-         (1 - fveg)*Ua*(log(zsub/z0g) - psim(zsub,rL) + psim(z0g,rL)) / &
-                       (log(zU/z0g) - psim(zU,rL) + psim(z0g,rL))
-
+  
 if (ne>4 .and. abs(ebal)<0.01) exit
 end do
 end if  ! forest
-!print*,ne,ebal
-!write(31,*) SWsrf,LWsub - sb*Tsrf**4,Gsrf,Hsrf,Lsrf*Esrf,Lf*Melt
+
+#if EBDIAG == 1
+if (Melt > 0) then
+  if (sum(Sice(:)) - Esrf*dt - Melt*dt > 0) then
+    write(71,100) SWsrf,LWsub-sb*Tsrf**4,Gsrf,Hsrf,Lsrf*Esrf,Lf*Melt
+  end if
+end if
+100 format(6(f16.8))
+#endif
 
 ! Sublimation limited by available snow
 subl = 0
@@ -636,10 +615,10 @@ if (Ssub > 0 .or. Tsrf<Tm) then
   subl = Esrf
 end if
 if (VAI>0) then
-  do k = 1, Ncnpy
-    if (Sveg(k)>0 .or. Tveg(k)<Tm) then
-      Eveg(k) = min(Eveg(k), Sveg(k)/dt)
-      subl = subl + Eveg(k)
+  do n =1, Ncnpy
+    if (Sveg(n)>0 .or. Tveg(n)<Tm) then
+      Eveg(n) = min(Eveg(n), Sveg(n)/dt)
+      subl = subl + Eveg(n)
     end if
   end do
 end if
@@ -648,6 +627,23 @@ end if
 E = Esrf + sum(Eveg(:))
 H = Hsrf + sum(Hveg(:))
 LE = Lsrf*Esrf + sum(Lcan(:)*Eveg(:))
+
+! Diagnostics
+if (VAI==0) then
+  LWout = sb*Tsrf**4
+  ustar = vkman*Ua/(log(zU1/z0g) - psim(zU1,rL) + psim(z0g,rL))
+  Usub = (ustar/vkman)*(log(zsub/z0g) - psim(zsub,rL) + psim(z0g,rL))
+  gs = vkman*ustar/(log(zsub/z0h) - psih(zsub,rL) + psih(z0h,rL))
+else
+  Uc = exp(wcan*(hbas/vegh - 1))*Uh
+  Usub = fveg*Uc*log(zsub/z0g)/log(hbas/z0g) +  &
+         (1 - fveg)*Ua*(log(zsub/z0g) - psim(zsub,rL) + psim(z0g,rL)) / &
+                       (log(zU/z0g) - psim(zU,rL) + psim(z0g,rL))
+  rd = log(zsub/z0g)*log(zsub/z0h)/(vkman**2*Uc)
+  ro = (log(zsub/z0h) - psih(zsub,rL) + psih(z0h,rL))/(vkman*ustar)
+  gs = fveg/rd + (1 - fveg)/ro
+end if
+Tsub = Tsrf - Hsrf/(cp*rho*gs)
 
 end subroutine SRFEBAL
 
