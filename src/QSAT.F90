@@ -23,10 +23,10 @@ real :: &
 
 Tc = T - Tm
 if (Tc > 0) then
-  es = e0*exp(17.5043*Tc / (241.3 + Tc))
+  es = e0*exp(17.5043*Tc/(241.3 + Tc))
 else
-  es = e0*exp(22.4422*Tc / (272.186 + Tc))
+  es = e0*exp(22.4422*Tc/(272.186 + Tc))
 end if
-Qs = eps*es / P
+Qs = eps*es/P
 
 end subroutine QSAT

@@ -12,7 +12,7 @@ FSM2 requires meteorological driving data and namelists to set options and param
 
     ./FSM2 < nlst_Alptal.txt
 
-which run simulations for the winter of 2004-2005 at Alptal, Switzerland (Stähli and Gustafsson, 2006). Two points are simulated: one with forest cover and one without.
+which runs simulations for the winter of 2004-2005 at Alptal, Switzerland (Stähli and Gustafsson, 2006). Two points are simulated: one with forest cover and one without.
 
 ## References
 

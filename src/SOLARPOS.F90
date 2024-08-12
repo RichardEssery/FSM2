@@ -16,7 +16,7 @@ integer, intent(in) :: &
 real, intent(in) :: &
   hour,              &! Hour of day
   lat,               &! Latitude (radians)
-  noon                ! Time of solar noon (hour)
+  noon                ! Time of solar noon (hours)
 
 real, intent(out) :: &
   azim,              &! Solar azimuth (radians)
