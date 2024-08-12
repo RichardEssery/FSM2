@@ -1,0 +1,25 @@
+&params
+  acn0 = 0.06
+  avg0 = 0.142
+/
+&gridpnts
+  Npnts = 2
+/
+&gridlevs
+/
+&drive
+  met_file = 'met_Alptal_0405.txt'
+  lat = 47.05
+  zT = 35
+  zU = 35
+/
+&veg
+  alb0 = 0.15, 0.15
+  vegh = 0.00, 25.0
+  VAI  = 0.00, 3.96
+/
+&initial
+/
+&outputs
+  runid = 'Alptal_'
+/
