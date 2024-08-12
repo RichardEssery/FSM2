@@ -19,9 +19,8 @@ real, intent(out) :: &
   x(Nmax)             ! Solution vector
 
 integer :: n          ! Loop counter 
-
-! Work space   
-real :: beta, g(Nvec) 
+   
+real :: beta, g(Nvec) ! Work space 
 
 beta = b(1)
 x(1) = r(1) / beta
