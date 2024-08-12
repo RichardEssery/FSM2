@@ -1,645 +1,219 @@
-\documentclass{article}
+\documentclass[fleqn]{article}
 \usepackage[margin=2cm]{geometry}
 \usepackage{amsmath}
+\setlength{\mathindent}{0pt}
+\usepackage{enumitem}
 \usepackage{graphicx}
 \usepackage{hyperref}
-\title{Flexible Snow Model (FSM2) scientific documentation}
-\author{Richard Essery}
-\date{2 January 2019}
+\usepackage{longtable}
+\title{Flexible Snow Model scientific documentation}
+\author{Version 2.1.0}
+\date{\today}
 \begin{document}
 \maketitle
 
-The Flexible Snow Model allows alternative process parametrizations to be combined in a complete model of the mass and energy balances of snow on the ground and in forest canopies. Existing models from which parametrizations are taken for inclusion in FSM2 include
-\href{https://www.tandfonline.com/doi/abs/10.3137/ao.440301}{CLASS},
-\href{http://www.cesm.ucar.edu/models/cesm1.2/clm/CLM45_Tech_Note.pdf}{CLM},
-\href{https://www.geosci-model-dev.net/5/773/2012/}{Crocus}, 
-\href{https://www.umr-cnrm.fr/IMG/pdf/snowdoc_v2.pdf}{ISBA} and 
-\href{https://link.springer.com/article/10.1007/s003820050276}{MOSES}.
-Parametrizations are selected by setting option numbers in a text file before the model is compiled. Parameter values and input data are read from text files when the model is run. Physical constants, meteorological driving variables, site characteristics, model state variables and parameters are listed in tables 1 to 5; refer to these tables for any variables that are not explicitly defined in the text.
+{\parindent 0pt
+The Flexible Snow Model (FSM2) allows alternative process parametrizations to be combined in a complete model of the mass and energy balances of snow on the ground and in forest canopies. Parametrizations are selected by setting option numbers in a text file before the model is compiled. Parameter values and input data are read from text files when the model is run. Outputs can be written to text or netCDF files. Physical constants, meteorological driving variables, site characteristics, model state variables and parameters are listed in tables 1 to 6; refer to these tables for any variables that are not explicitly defined in the text. Calculations are described below in the order in which they are performed in the code.
+}
 
-\section{Snow-free and snow-covered ground albedos}
+\section{Constants and variables}
 
-Bare ground with albedo $\alpha_0$ and snow cover fraction $f_s$ with albedo $\alpha_s$ have average albedo
-\begin{equation}
-\alpha_g = (1 - f_s)\alpha_0 +f_s\alpha_s.
-\end{equation} 
-The snow cover is a function of snow depth $h$ parametrized as
-\begin{equation}
-f_s(h) = \frac{h}{h + h_f}
-\end{equation}
-if option {\tt SNFRAC=0} is set in the compilation file, and
-\begin{equation}
-f_s(h) = \tanh\left(\frac{h}{h_f}\right)
-\end{equation}
-if {\tt SNFRAC=1}.
+{\parindent0pt
 
-\subsection{Diagnosed snow albedo (option {\tt ALBEDO=0})}
-
-Following a common approach in earlier generations of climate models, snow albedo is diagnosed as a function of surface temperature 
-\begin{equation}
-\alpha_s(T_*) = \alpha_{\rm min} + (\alpha_{\rm max} - \alpha_{\rm min})
-                \min\left(\frac{T_* - T_m}{T_\alpha}, 1\right).        
-\end{equation}
-
-\subsection{Prognostic snow albedo (option {\tt ALBEDO=1})}
-
-Based on CLASS and ISBA, decreasing albedo as snow ages with time $t$ and increasing albedo as fresh snow falls at rate $S_f$ are parametrized by
-\begin{equation}
-\frac{d\alpha_s}{dt} = \frac{1}{\tau_\alpha}(\alpha_{\rm min} - \alpha_s) + \frac{S_f}{S_\alpha}(\alpha_{\rm max} - \alpha_s),
-\label{eq:albedo} 
-\end{equation} 
-where the timescale $\tau_\alpha$ has different values $\tau_{\rm cold}$ and $\tau_{\rm melt}$ for cold and melting snow. Equation (\ref{eq:albedo}) is implemented by integrating over a timestep of length $\delta t$ to give the change in snow albedo as
-\begin{equation}
-\delta\alpha_s = (\alpha_{\rm lim} - \alpha_s)(1-e^{-\gamma\delta t}),  
-\end{equation}
-where
-\begin{equation}
-\gamma = \frac{1}{\tau_\alpha}+\frac{S_f}{S_\alpha}
-\end{equation}
-and
-\begin{equation}
-\alpha_{\rm lim} = \frac{1}{\gamma}\left(\frac{1}{\tau_\alpha}\alpha_{\rm min} +\frac{S_f}{S_\alpha}\alpha_{\rm max}\right).
-\end{equation}
-
-\section{Snow density}
-
-\subsection{Compaction}
-Snow may be assumed to have constant density $\rho_0$ (option {\tt DENSTY=0}) or to compact at rate
-\begin{equation}
-\frac{d\rho_s}{dt} = f_\rho(\rho_s,T_s).
-\label{eq:drhodt}
-\end{equation}
-Snow density $\rho_s$ in layer $k$ with ice mass $I$ and liquid water mass $W$ at the beginning of timestep $n$ is diagnosed as
-\begin{equation}
-\rho_{s,k}^{(n)} = \frac{I_k^{(n)} + W_k^{(n)}}{D_{s,k}}.
-\label{eq:rhok}
-\end{equation}
-Equation (\ref{eq:drhodt}) is then implemented as
-\begin{equation}
-\rho_{s,k}^{(n+1)} = \rho_{s,k}^{(n)} + f_\rho\left(\rho_{s,k}^{(n)},T_{s,k}^{(n)}\right)\delta t.
-\end{equation}
-Finally, the thickness of the compacted layer at the end of the timestep is calculated by inverting Equation (\ref{eq:rhok}).
-
-\subsubsection{Empirical maximum densities (option {\tt DENSTY=1})}
-
-Based on CLASS, the compaction rate function is
-\begin{equation}
-f_\rho = \frac{1}{\tau_\rho}(\rho_{\max} - \rho_s)
-\end{equation}
-with the same time constant $\tau_\rho$ but different asymptotic values $\rho_{\rm cold}$ and $\rho_{\rm melt}$ for $\rho_{\max}$ in cold and melting snow.
-
-\subsubsection{Viscous compaction by overburden and thermal metamorphism (option {\tt DENSTY=2})}
-
-Following ISBA, the compaction rate function is
-\begin{equation}
-f_\rho = \rho_s\left\{\frac{gm}{\eta} + c_1 \exp\left[\frac{(T_s - T_m)}{23.8} 
-                - \max\left(\frac{\rho_s - 150}{21.7}, 0\right)\right]\right\}
-\end{equation}
-where
-\begin{equation}
-\eta = \eta_0\exp\left[-\frac{(T_s - T_m)}{12.4} + \frac{\rho_s}{55.6}\right].
-\end{equation}
-and the snow mass overlying the middle of a layer is
-\begin{equation}
-m_k = \sum_{j=1}^{k-1}\left[I_j^{(n)} + W_j^{(n)}\right] + 0.5\left[I_k^{(n)} + W_k^{(n)}\right].
-\end{equation}
-
-\subsection{Fresh snow density}
-
-Fresh snow deposited with density $\rho_f$ over a timestep increases the snow depth before compaction by $\rho_f^{-1}S_f\delta t$. Unless snow density is fixed, the density of fresh snow is taken from
-\begin{equation}
-\rho_f = \max[\rho_0 + b_\rho (T_a - T_m) + c_\rho U_a^{1/2}, 50].
-\end{equation}
-Parameter values can be selected to match CLM ($\rho_0=100$ kg m$^{-3}$) or Crocus $(\rho_0=109$ kg m$^{-3}$, $a_\rho=6$ kg m$^{-3}$ K$^{-1}$ and $b_\rho=26$ kg m$^{-7/2}$ s$^{1/2}$). Snow unloading from a forest canopy is added to snow on the ground with the bulk density of the existing snow. 
-
-
-\section{Canopy radiative transfer}
-
-Forest structure is defined by canopy height $h$, vegetation area index $\Lambda$ (including leaves and stems) and vegetation fraction $f_v$, which is either parametrized as $1-\exp(-k_{\rm veg}\Lambda)$ or specified as an input. The fraction of radiation incident from above at elevation angle $\theta$ that is transmitted through the canopy without interception is parametrized as 
-\begin{equation}
-\tau_{\rm dir} = \exp[-(G_1 + G_2\sin\theta)\Lambda/\sin\theta].
-\end{equation}
-The canopy transmissivity for diffuse radiation is parametrized as
-\begin{equation}
-\tau_{\rm dif} = \exp(-k_{\rm dif}\Lambda)
-\label{eq:fsky}
-\end{equation}
-by default but can also be specified as a sky view fraction $f_{\rm sky}$ for sites which are not directly under trees ($\Lambda=0$) but which are shaded by surrounding vegetation or topography ($f_{\rm sky}<1$). In principle, the parameters $G_1$, $G_2$ and $k_{\rm dif}$ are not independent.
-
-\subsection{Shortwave radiation}
-
-A forest canopy with intercepted snow mass $S_v$ and interception capacity $S_{\rm cap}$ is assumed to have snow cover fraction 
-\begin{equation}
-f_{cs} = \frac{S_v}{S_{\rm cap}}
-\end{equation}
-and albedo
-\begin{equation}
-\alpha_c = f_v[(1 - f_{cs})\alpha_{c0} + f_{cs}\alpha_{cs}].
-\end{equation}
-As illustrated in Figure \ref{fig:SWcan}, the canopy is assumed to reflect fraction $\alpha_c$ of incoming shortwave radiation, but radiation reflected from the ground is transmitted and absorbed by the canopy without further reflections. For incoming shortwave radiation made up of a diffuse component $S_{\rm dif}$ and a direct-beam component $S_{\rm dir}$, the net absorption is
-\begin{align}
-SW_v = & (1 - \alpha_c)[1 - (1 - \alpha_g)\tau_{\rm dif} 
-                          - \alpha_g\tau_{\rm dif}\tau_{\rm dif}]S_{\rm dif} + \\
-       & (1 - \alpha_c)[1 - (1 - \alpha_g)\tau_{\rm dir} 
-                          -  \alpha_g\tau_{\rm dif}\tau_{\rm dir}]S_{\rm dir}
-\label{eq:SWv} 
-\end{align}
-by the forest canopy and
-\begin{equation}
-SW_g = (1 - \alpha_c)(1 - \alpha_g)(\tau_{\rm dif}S_{\rm dif} + \tau_{\rm dir}S_{\rm dir}).
-\label{eq:SWg} 
-\end{equation}
-by the ground or snow surface. The effective above-canopy albedo, including shortwave radiation reflected from the canopy and the ground, is
-\begin{equation}
-\alpha = \alpha_c + (1 - \alpha_c)\alpha_g\tau_{\rm dif}\left(
-         \frac{\tau_{\rm dif}S_{\rm dif} + \tau_{\rm dir}S_{\rm dir}}
-              {S_{\rm dif} + S_{\rm dir}}\right).
-\end{equation} 
-
-\begin{figure}[t]
-\includegraphics[width=6cm]{SWcan.png}
-\caption{Reflection and transmission of diffuse and direct-beam shortwave radiation by a forest canopy and diffuse reflection by the ground surface.}
-\label{fig:SWcan}
-\end{figure}
-
-Usually, only measurements of global shortwave radiation are available. Option {\tt SWPART=0} treats all of the global radiation as diffuse and option {\tt SWPART=1} partitions global shortwave radiation into direct and diffuse components as described in Appendix A. If separate measurements of direct and diffuse components are available, they can be read as inputs using option {\tt SWPART=2}. {\it Two-stream radiative transfer to be added as an option}
-
-\subsection{Longwave radiation}
-The net absorption of longwave radiation is
-\begin{equation}
-LW_v = (1 - f_{\rm sky}) (LW_\downarrow  + \sigma T_*^4 - 2\sigma T_v^4) 
-\end{equation} 
-by the forest canopy and
-\begin{equation}
-LW_g = f_{\rm sky}LW_\downarrow - \sigma T_*^4  + (1 - f_{\rm sky})\sigma T_v^4
-\label{eq:LWg}
-\end{equation}
-by the ground or snow surface. Upwelling longwave radiation above a forest canopy is
-\begin{equation}
-LW_\uparrow = f_{\rm sky}\sigma T_*^4  + (1 - f_{\rm sky})\sigma T_v^4.
-\end{equation}
-
-
-\section{Turbulent fluxes}
-
-\subsection{Roughness lengths and aerodynamic resistances}
-
-Roughness lengths for snow-free ground and snow on fraction $f_s$ of the ground are combined to give a ground roughness length
-\begin{equation}
-z_{0g} =  z_{0f}^{1-f_s} z_{0s}^{f_s}.
-\end{equation}
-For vegetation of height $h$ covering fraction $f_v$ of the ground, the roughness length and displacement height are $z_{0v} = R_{z0}h$ and $d = f_vR_dh$. The combined surface roughness length is
-\begin{equation}
-z_0 = z_{0g}^{1-f_v} z_{0v}^{f_v}.
-\end{equation}
-
-The aerodynamic resistance network for turbulent exchanges of heat between the ground, vegetation and the atmosphere is shown in Figure \ref{fig:rescan}. The resistance between the canopy air space and the atmosphere is
-\begin{equation}
-r_{aa} = \frac{1}{f_H k u_*}\ln\left(\frac{z_T-d}{z_0}\right)
-\label{eq:raa} 
-\end{equation}
-with atmospheric stability factor $f_H$ and friction velocity
-\begin{equation}
-u_* = kU_a\left[\ln\left(\frac{z_U-d}{z_0}\right)\right]^{-1}.
-\end{equation}
-Vegetated and unvegetated fractions of the ground share a common surface temperature but have separate aerodynamic resistances that combine in parallel to give resistance
-\begin{equation}
-r_{ag} = \frac{1}{ku_*}\left[\frac{(1-f_v)f_h}{\ln(z_{0g}/z_{0h})} + 
-                             f_vf_cC_{\rm dense}\right]^{-1}
-\label{eq:rag} 
-\end{equation}
-between the ground and the canopy air space, with sub-canopy stability factor $f_c$. The roughness length for heat $z_{0h}$ is assumed to be equal to $0.1z_{0g}$. Between vegetation and the canopy air space, the aerodynamic resistance is
-\begin{equation}
-r_{av} = \frac{C_{\rm veg}}{\Lambda u_*^{1/2}}.
-\end{equation}
-$C_{\rm dense}$, $C_{\rm veg}$ are constant parameters. In the absence of vegetation ($\Lambda=f_v=0)$, resistances for heat transfer combine to give
-\begin{equation}
-r_h \equiv r_{aa} + r_{ag} = \frac{1}{f_hk^2U_a}\ln\left(\frac{z_U}{z_{0g}}\right)
-                                                \ln\left(\frac{z_T}{z_{0h}}\right).
-\label{eq:rh}
-\end{equation}
-
-\subsubsection{Neutral stability (option {\tt EXCHNG=0})}
-
-Atmospheric stability is neglected by setting $f_H=1$.
-%and $\psi_m=\psi_H=0$.
-
-\subsubsection{Richardson number stability functions (option {\tt EXCHNG=1})}
-
-Atmospheric stability is characterized by a bulk Richardson number
-\begin{equation}
-{\rm Ri_B} = \frac{g(z_U-d)^2[T_a - f_vT_v - (1-f_v)T_*]}{(z_T-d) T_a U_a^2}.
-\end{equation}
-The aerodynamic resistances in Equation (\ref{eq:raa}) and (\ref{eq:rag}) are adjusted by factor
-\begin{equation}
-f_H  = \begin{cases} 
-       [1 + 3b_h{\rm Ri_B}(1 + b_h{\rm Ri_B})^{1/2}]^{-1}  & {\rm Ri_B} \geq 0 \\
-        1 - 3b_h{\rm Ri_B}[1 + c(-{\rm Ri_B})^{1/2}]^{-1}  & {\rm Ri_B} < 0
-\end{cases}
-\end{equation}
-with 
-\begin{equation}
-c = 3b_h^2k^2\left(\frac{z_U}{z_0}\right)^{1/2}\left[\ln\left(\frac{z_U}{z_0}\right)\right]^{-2}.
-\end{equation}
-The sub-canopy stability factor is
-\begin{equation}
-f_c = \frac{1}{1 + {\rm Ri}_c/2}
-\end{equation}
-with Richardson number
-\begin{equation}
-{\rm Ri}_c = \frac{gh(T_c - T_*)}{T_c u_*^2}
-\end{equation}
-limited to values in the range 0 - 10.
-
-\subsubsection{Obukhov length stability functions ({\it option to be added})}
-
-\begin{figure}[t]
-\includegraphics[width=8cm]{rescan.png}
-\caption{Aerodynamic resistance network for heat exchanges between the ground, vegetation and the atmosphere.}
-\label{fig:rescan}
-\end{figure}
-
-\subsection{Snow on short vegetation and bare ground}
-
-Sensible heat and moisture fluxes from the ground or snow surface without exposed vegetation to the atmosphere are
-\begin{equation}
-H_g = \frac{\rho c_p}{r_h}(T_* - T_a)
-\label{eq:Hg}
-\end{equation}
-and
-\begin{equation}
-E_g = \frac{\rho\psi_g}{r_h}[Q_{\rm sat}(T_*,P_s) - Q_a]
-\label{eq:Eg}
-\end{equation}
-where $Q_{\rm sat}$ is the specific humidity at saturation over water or ice (Appendix B) and $\rho=P_s/(R_{\rm air}T_a)$ is the air density. The moisture availability factor $\psi_g$ is set to 1 if there is snow on the ground or if $Q_{\rm sat}(T_*,P_s)<Q_a$ (moisture flux onto the surface) and 
-\begin{equation}
-\psi_g = \frac{r_h}{r_h+r_{sg}}
-\label{eq:psig}
-\end{equation}
-otherwise, where $r_{sg}$ is a resistance for evaporation from soil moisture. Without exposed vegetation, moisture and sensible heat fluxes to the atmosphere are $E=E_g$ and $H=H_g$. The latent heat flux is $LE$, with $L$ taken to be the latent heat of vapourisation if $T_*>T_m$ and the latent heat of sublimation otherwise.
-
-\subsection{Forest canopies and underlying ground}
-
-Sensible heat fluxes are 
-\begin{equation}
-H = \frac{\rho c_p}{r_{aa}}(T_c - T_a)
-\label{eq:H}
-\end{equation}
-upwards from the canopy air space,
-\begin{equation}
-H_g = \frac{\rho c_p}{r_{ag}}(T_* - T_c)
-\end{equation}
-from the ground to the canopy air space, and
-\begin{equation}
-H_v = \frac{\rho c_p}{r_{av}}(T_v - T_c)
-\label{eq:Hv}
-\end{equation}
-from the vegetation to the canopy air space. Similarly, moisture fluxes are  
-\begin{equation}
-E = \frac{\rho}{r_{aa}}(Q_c - Q_a)
-\end{equation}
-upwards from the canopy air space,
-\begin{equation}
-E_g = \frac{\rho \psi_g}{r_{ag}}[Q_{\rm sat}(T_*,P_s) - Q_c]
-\end{equation}
-from the ground to the canopy air space, and
-\begin{equation}
-E_v = \frac{\rho \psi_v}{r_{av}}[Q_{\rm sat}(T_v,P_s) - Q_c]
-\label{eq:Ev}
-\end{equation}
-from the vegetation to the canopy air space, with moisture availability factor $\psi_v=1$ if there is snow on the canopy or if $Q_{\rm sat}(T_v)<Q_c$ (moisture flux onto the canopy) and
-\begin{equation}
-\psi_v = \frac{r_{av}}{r_{av}+r_{sg}}
-\end{equation}
-otherwise.
-
-\section{Energy balance}
-
-\subsection{Snow on short vegetation and bare ground}
-
-The surface energy balance
-\begin{equation}
-f(T_*) = LW_g + SW_g - G - H_g - LE_g - L_fM = 0
-\label{eq:ebal}
-\end{equation}
-with flux parametrizations substituted from Equations (\ref{eq:LWg}), (\ref{eq:Hg}) and (\ref{eq:Eg}) is a nonlinear equation for the unknown surface temperature and snowmelt rate $M$. From an initial guess of temperature $T_{*0}$ and no melt, a linear estimate of $T_*$ is given by
-\begin{equation}
-T_* = T_{*0} - f(T_{*0})\left(\frac{df}{dT_*}\right)^{-1}.
-\label{eq:Newton}
-\end{equation}
-A single application of Equation (\ref{eq:Newton}) gives an approximate solution, and repeated applications with $T_*$ calculated in each iteration being used as $T_{*0}$ in the next is the Newton-Raphson method for solving Equation (\ref{eq:ebal}). Neglecting the complicated temperature dependence of $r_{aa}$, this gives
-\begin{equation}
-T_* = T_{*0} + \frac{LW_g + SW_g - G - H_g - LE_g - L_fM}
-                    {4\sigma T_{*0}^3 + 2\lambda_1/\Delta h_1
-                                      + \rho(c_p + LD_g\psi_g)/r_h}.
-\label{eq:Tsurf}
-\end{equation}
-where the fluxes in the numerator are calculated using $T_* = T_{*0}$, and
-\begin{equation}
-D_g = \left.\frac{dQ_{\rm sat}}{dT}\right\rvert_{T=T_{*0}} 
-    = \frac{LQ_{\rm sat}(T_{*0})}{R_{\rm wat}T_{*0}^2}.
-\end{equation}
-Equation (\ref{eq:Tsurf}) is first evaluated with $M=0$. If this gives $T_* > T_m$ and there is snow with ice mass $I$ on the ground, Equation (\ref{eq:Tsurf}) is re-evaluated assuming that all of the snow melts and $M = I / \delta t$. If this gives $T_* < T_m$, the snow does not all melt and $T_* = T_m$ is known; Equation (\ref{eq:ebal}) is solved instead for the unknown melt rate by substitution of $T_* = T_m$ in the equations for the other fluxes.
-
-\subsection{Forest canopies and underlying ground}
-
-\subsubsection{Zero-layer canopy model (option {\tt CANMOD=0})}
-
-The zero-layer canopy model does not attempt to calculate the canopy energy balance, instead assuming that the canopy temperature is equal to the air temperature. Substituting $T_v = T_a$ in Equations (\ref{eq:H}) to (\ref{eq:Ev}) and rearranging gives
-\begin{equation}
-H_g = \frac{\rho c_p}{r_h}(T_* - T_a)
-\end{equation}
-with
-\begin{equation}
-r_h = r_{ag} + \left(\frac{1}{r_{aa}}+\frac{1}{r_{av}}\right)^{-1}.
-\label{eq:modrh}
-\end{equation}
-and 
-\begin{equation}
-E_g = \frac{\rho\psi_g}{r_h}(T_* - T_a)
-\end{equation}
-with
-\begin{equation}
-\frac{r_h}{\psi_g} = r_{ag} + r_{sg} + \left(\frac{1}{r_{aa}}+\frac{\psi_v}{r_{av}}\right)^{-1}.
-\label{eq:modpsi}
-\end{equation}
-Surface temperature and melt rate are found by solving Equations (\ref{eq:Tsurf}) and (\ref{eq:ebal}) with the modified aerodynamic resistance and moisture factor from Equations (\ref{eq:modrh}) and (\ref{eq:modpsi}) instead of Equations (\ref{eq:rh}) and (\ref{eq:psig}). The rate of moisture transfer from or to the canopy is 
-\begin{equation}
-E_v = -\left(\frac{\psi_v r_{aa}}{\psi_v r_{aa} + r_{av}}\right)E_g.
-\end{equation}
-
-
-\subsubsection{One-layer canopy model (option {\tt CANMOD=1})}
-
-Energy and mass conservation equations
-\begin{equation}
-f_1 = (H - H_g - H_v)/(\rho c_p) = 0,
-\end{equation}
-\begin{equation}
-f_2 = (E - E_g - E_v)/\rho = 0,
-\end{equation}
-\begin{equation}
-f_3 = LW_g + SW_g - G - H_g - LE_g = 0,
-\label{eq:f3}
-\end{equation}
-and
-\begin{equation}
-f_4 = LW_v + SW_v - H_v - LE_v - C_{\rm can}\frac{dT_v}{dt} = 0,
-\end{equation}
-form a set of four nonlinear equations with four unknowns: $Q_c$, $T_c$, $T_*$ and $T_v$.
-Writing vectors ${\bf f} = (f_1, f_2, f_3, f_4)^T$ and ${\bf x} = (Q_c, T_c, T_*, T_v)^T$, a solution is found by iterating 
-\begin{equation}
-{\bf x} = {\bf x}_0 - {\rm J}^{-1}{\bf f}({\bf x}_0)
-\label{eq:multiNR}
-\end{equation}
-where ${\rm J}$ is the Jacobian matrix of {\bf f} with elements
-\begin{equation}
-{\rm J}_{ij} = \frac{\partial f_i}{\partial x_j}
-\end{equation}
-or
-\begin{equation}
-{\rm J} =
-\begin{bmatrix}
-0 & -\left(r_{aa}^{-1} + r_{ag}^{-1} + r_{av}^{-1} \right) & r_{ag}^{-1} & r_{av}^{-1} \\
--\left(r_{aa}^{-1} + \psi_g r_{ag}^{-1} + \psi_v r_{av}^{-1}\right) & 0 
-& \psi_g D_g r_{ag}^{-1} & \psi_v D_v r_{av}^{-1} \\
--L\rho\psi_g r_{ag}^{-1} & -\rho c_p r_{ag}^{-1} & J_{33} & -4f_v\sigma T_v^3\\
--L\rho\psi_v r_{av}^{-1} & -\rho c_p r_{av}^{-1} & -4f_v\sigma T_*^3
-& J_{44} \\
-\end{bmatrix}
-\end{equation}
-with
-\begin{equation}
-J_{33} = (c_p+L\psi_gD_g)\frac{\rho}{r_{ag}}+4\sigma T_*^3 + 2\frac{\lambda_1}{\Delta h_1}
-\end{equation}
-and
-\begin{equation}
-J_{44} = \frac{C_{\rm can}}{\delta t}+(c_p+L\psi_v D_v)\frac{\rho}{r_{av}}+8f_v\sigma T_v^3
-\end{equation}
-Equation (\ref{eq:multiNR}) is implemented by solving
-\begin{equation}
-{\rm J}({\bf x - x}_0) = {\bf f}({\bf x}_0)
-\label{eq:increments}
-\end{equation}
-for ${\bf x}$ by LU decomposition. If this gives $T_* > T_m$ and there is snow with ice mass $I$ on the ground, Equation (\ref{eq:f3}) is replaced by
-\begin{equation}
-f_3 = LW_g + SW_g - G - H_g - LE_g - L_fM.
-\end{equation}
-It is first assumed that all of the snow melts and Equation (\ref{eq:increments}) is solved again with $M = I/\delta t$. If this gives $T_* < T_m$, the snow does not all melt and the surface temperature is known but the melt rate is unknown. Fluxes in $f$ are recalculated with $T_* = T_m$, elements in the third column of ${\rm J}$ are replaced by $J_{13}=J_{23}=J_{43}=0$ and $J_{33}=1$, and $M=x_3/L_f$ is found from the solution of Equation (\ref{eq:increments}).
-
-\subsubsection{Two-layer canopy model ({\it option to be added})}
-
-\section{Mass balance}
-
-A forest canopy can intercept a fraction of falling snow up to a maximum capacity which is either parametrized as $S_{\rm cap} = c_{\rm vai}\Lambda$ or read from a file. If the canopy holds snow mass $S_v$ at the beginning of a timestep, the amount of snow intercepted in the timestep is
-\begin{equation}
-\delta S_v = (S_{\rm cap} - S_v)\left[1 - \exp\left(-\frac{f_vS_f\delta t}{S_{\rm cap}}
-                                \right)\right]
-\end{equation}
-and the rate of snowfall reaching the ground is reduced to
-\begin{equation}
-T_f = S_f - \frac{\delta S_v}{\delta t}.
-\end{equation}
-Snow sublimates from the canopy at rate $E_v$ and unloads at rate $U_c = \tau_{\rm can}^{-1}S_v$ with different values of the time constant $\tau_{\rm can}$ for cold and melting snow; if $\tau_{\rm can} \leq \delta t$, all of the snow will unload immediately from the canopy. Interception and storage of liquid water in the canopy are neglected. The combined mass balance equation for canopy snow is
-\begin{equation}
-\frac{dS_v}{dt} = S_f - T_f - U_c - E_v.
-\end{equation}
-
-If there is no forest canopy, the throughfall and unloading rates are obviously $T_f=S_f$ and $U_c=0$. The mass balance equations for ice and liquid water in snow on the ground are
-\begin{equation}
-\frac{dI}{dt} = T_f + U_c - E_g - M + F
-\end{equation}
-and
-\begin{equation}
-\frac{dW}{dt} = R_f + M - F - R_o.
-\end{equation}
-If storage of liquid water in snow is neglected (option {\tt HYDROL=0}), internal refreezing rate in the snow $F=0$ and runoff rate at the base of the snow $R_o=R_f+M$. If bucket storage is selected (option {\tt HYDROL=1}), snow layer $k$ with porosity
-\begin{equation}
-\phi_k = 1 - \frac{I_k}{\rho_{\rm ice}D_{s,k}}
-\end{equation}
-can hold a maximum mass $\rho_{\rm wat}\phi_k W_{\rm irr}$ of liquid water. 
-
-\section*{Tables}
-\parindent0pt
-%\begin{table}
-\begin{tabular}{|l|l|l|}
+Table 1. Physical constants and quantities assumed to be constant in FSM2 (module {\tt CONSTANTS}).
+\begin{longtable}{|l|l|}
 \hline
-Documentation & Code & Value \\
+Constant                                           & Value \\
 \hline
-Heat capacity of air $c_p$            & {\tt cp}        & 1005 J K$^{-1}$ kg$^{-1}$  \\
-Heat capacity of ice $c_{\rm ice}$    & {\tt hcap\_ice} & 2100 J K$^{-1}$ kg$^{-1}$  \\
-Heat capacity of water $c_{\rm wat}$  & {\tt hcap\_wat} & 4180 J K$^{-1}$ kg$^{-1}$  \\
-Acceleration due to gravity $g$       & {\tt g}         & 9.81 m s$^{-2}$            \\
-Solar constant $I_0$                  & {\tt I0}        & 1367 W m$^{-2}$            \\
-Von K\'arm\'an constant $k$           & {\tt vkman}     & 0.4                        \\
-Latent heat of fusion of water $L_f$  & {\tt Lf}        & $0.334 \times 10^6$ J kg$^{-1}$ \\
-Latent heat of sublimation of ice $L_s$ & {\tt Ls}      & $2.835 \times 10^6$ J kg$^{-1}$ \\
-Latent heat of vapourisation of water $L_v$ & {\tt Lv}  & $2.501 \times 10^6$ J kg$^{-1}$ \\
-Gas constant for air $R_{\rm air}$    & {\tt Rair}      & 287 J K$^{-1}$ kg$^{-1}$   \\
-Gas constant for water vapour $R_{\rm wat}$ & {\tt Rwat} & 462 J K$^{-1}$ kg$^{-1}$ \\
-Melting point of ice $T_m$            & {\tt Tm}        & 273.15 K                  \\
-Thermal conductivity of air $\lambda_{\rm air}$   & {\tt hcon\_air}  & 0.025 W m$^{-1}$ K$^{-1}$ \\
-Thermal conductivity of clay $\lambda_{\rm clay}$ & {\tt hcon\_clay} & 1.16 W m$^{-1}$ K$^{-1}$ \\
-Thermal conductivity of ice $\lambda_{\rm ice}$   & {\tt hcon\_ice}  & 2.24 W m$^{-1}$ K$^{-1}$ \\
-Thermal conductivity of sand $\lambda_{\rm sand}$ & {\tt hcon\_sand} & 1.57 W m$^{-1}$ K$^{-1}$ \\
-Thermal conductivity of water $\lambda_{\rm wat}$ & {\tt hcon\_wat}  & 0.56 W m$^{-1}$ K$^{-1}$ \\
-Density of ice $\rho_{\rm ice}$ & {\tt rho\_ice} & 917 kg m$^{-3}$ \\
-Density of water $\rho_{\rm wat}$ & {\tt rho\_wat} & 1000 kg m$^{-3}$ \\
-Stefan-Boltzmann constant $\sigma$ & {\tt sb} & $5.26 \times 10^{-8}$ W m$^{-2}$ K$^{-4}$ \\
+Heat capacity of air $c_p$                         & 1005 J K$^{-1}$ kg$^{-1}$ \\
+Heat capacity of ice $c_{\rm ice}$                 & 2100 J K$^{-1}$ kg$^{-1}$ \\
+Heat capacity of water $c_{\rm wat}$               & 4180 J K$^{-1}$ kg$^{-1}$ \\
+Saturation vapour pressure at $T_m$, $e_0$         & 611.213 Pa                \\
+Acceleration due to gravity $g$                    & 9.81 m s$^{-2}$           \\
+Solar constant $I_0$                               & 1367 W m$^{-2}$           \\
+Von K\'arm\'an constant $k$                        & 0.4                       \\
+Latent heat of fusion of water $L_f$               & $0.334 \times 10^6$ J kg$^{-1}$ \\
+Latent heat of sublimation of ice $L_s$            & $2.835 \times 10^6$ J kg$^{-1}$ \\
+Latent heat of vapourisation of water $L_v$        & $2.501 \times 10^6$ J kg$^{-1}$ \\
+Gas constant for air $R_{\rm air}$                 & 287 J K$^{-1}$ kg$^{-1}$  \\
+Gas constant for water vapour $R_{\rm wat}$        & 462 J K$^{-1}$ kg$^{-1}$  \\
+Melting point of ice $T_m$                         & 273.15 K                  \\
+Ratio of molecular weights of water and dry air $\varepsilon$ & 0.622          \\
+Thermal conductivity of air $\lambda_{\rm air}$    & 0.025 W m$^{-1}$ K$^{-1}$ \\
+Thermal conductivity of clay $\lambda_{\rm clay}$  & 1.16 W m$^{-1}$ K$^{-1}$  \\
+Thermal conductivity of ice $\lambda_{\rm ice}$    & 2.24 W m$^{-1}$ K$^{-1}$  \\
+Thermal conductivity of sand $\lambda_{\rm sand}$  & 1.57 W m$^{-1}$ K$^{-1}$  \\
+Thermal conductivity of water $\lambda_{\rm wat}$  & 0.56 W m$^{-1}$ K$^{-1}$  \\
+Dynamic viscosity of water $\mu_{\rm wat}$         & $1.78 \times 10^{-3}$ kg m$^{-1}$ \\
+Density of ice $\rho_{\rm ice}$                    & 917 kg m$^{-3}$           \\
+Density of water $\rho_{\rm wat}$                  & 1000 kg m$^{-3}$          \\
+Stefan-Boltzmann constant $\sigma$                 & $5.26 \times 10^{-8}$ W m$^{-2}$ K$^{-4}$ \\
 \hline 
-\end{tabular}
+\end{longtable}
 
-Table 1. Physical constants and quantities assumed to be constant in the code and documentation.
-%\label{table:constants}
-%\end{table}
+Table 2. Meteorological driving variables.
+\begin{longtable}{|l|l|l|}
+\hline
+Variable                                      & Units \\
+\hline
+Incoming longwave radiation $LW_\downarrow$   & W m$^{-2}$ \\
+Surface air pressure $P_s$                    & Pa \\
+Specific humidity $Q_a$                       & kg kg$^{-1}$ \\
+Relative humidity $RH$                        & \% \\
+Rainfall rate $R_f$                           & kg m$^{-2}$ s$^{-1}$ \\
+Snowfall rate $S_f$                           & kg m$^{-2}$ s$^{-1}$ \\
+Incoming shortwave radiation $SW_\downarrow$  & W m$^{-2}$ \\
+Air temperature $T_a$                         & K \\
+Wind speed $U_a$                              & m s$^{-1}$ \\
+\hline 
+\end{longtable}
 
-\vskip20pt
-\begin{tabular}{|l|l|l|}
+Table 3. State variables.
+\begin{longtable}{|l|l|l|}
 \hline
-Documentation                                & Code       & Units                  \\
+Variable & Units \\
 \hline
-Incoming longwave radiation $LW_\downarrow$  & {\tt LW}   & W m$^{-2}$             \\
-Surface air pressure $P_s$                   & {\tt Ps}   & Pa                     \\
-Specific humidity $Q_a$                      & {\tt Qa}   & kg kg$^{-1}$           \\
-Rainfall rate $R_f$                          & {\tt Rf}   & kg m$^{-2}$ s$^{-1}$   \\
-Snowfall rate $S_f$                          & {\tt Sf}   & kg m$^{-2}$ s$^{-1}$   \\
-Diffuse shortwave radiation $S_{\rm dif}$    & {\tt Sdif} & W m$^{-2}$             \\
-Direct-beam shortwave radiation $S_{\rm dir}$& {\tt Sdir} & W m$^{-2}$             \\
-Incoming shortwave radiation $SW_\downarrow$ & {\tt SW}   & W m$^{-2}$             \\
-Air temperature $T_a$                        & {\tt Ta}   & K                      \\
-Wind speed $U_a$                             & {\tt Ua}   & m s$^{-1}$             \\
-Wind direction (not yet used)                & {\tt Udir} & degrees clockwise of N \\
+\multicolumn{2}{|c|}{Forest canopy ($N_{\rm cnpy}$ layers)} \\
+\hline
+Canopy air space specific humidity $Q_c$ & kg kg$^{-1}$ \\
+Snow mass on canopy $S_v$                & W m$^{-2}$ \\
+Canopy air space temperature $T_c$       & K \\
+Vegetation temperature $T_v$             & K \\
 \hline 
-\end{tabular}
+\multicolumn{2}{|c|}{Surface}                \\
+\hline 
+Surface skin temperature $T_s$           & K \\
+\hline 
+\multicolumn{2}{|c|}{Snow on the ground (up to $N_{\rm smax}$ layers)}  \\
+\hline 
+Number of snow layers $N_{\rm snow}$     & - \\
+Albedo of snow $\alpha_s$                & - \\
+Thickness of snow layers $D_{sn}$        & m \\
+Radii of grains in snow layers $r$       & m \\
+Ice content of snow layers $I$           & kg m$^{-2}$ \\
+Liquid water content of snow layers $W$  & kg m$^{-2}$ \\
+Temperature of snow layers $T_{sn}$      & K \\
+\hline 
+\multicolumn{2}{|c|} {Soil ($N_{\rm soil}$ layers)} \\
+\hline 
+Temperature of soil layers $T_{sl}$      & K \\
+Volumetric moisture content of soil layers $\theta_{sl}$ & - \\
+\hline 
+\end{longtable}
 
-Table 2. Meteorological driving variables in the code and documentation
+Table 4. Model layers.
+\begin{longtable}{|l|l|l|}
+\hline
+Documentation                               & Namelist     & Default                \\
+\hline
+Fraction of vegetation in upper canopy layer $f_\Lambda$ & fvg1 & 0.5               \\ 
+Maximum number of snow layers $N_{\rm smax}$  & {\tt Nsmax}  & 3                    \\
+Fixed snow layer thicknesses $\Delta z_{sn}$  & {\tt Dzsnow} & 0.1, 0.2, 0.4 m      \\
+Number of soil layers $N_{\rm soil}$          & {\tt Nsoil}  & 4                    \\
+Soil layer thicknesses $\Delta z_{sl}$        & {\tt Dzsoil} & 0.1, 0.2, 0.4, 0.8 m \\
+\hline 
+\end{longtable}
 
-\vskip20pt
-\begin{tabular}{|l|l|l|}
+Table 5. Site and driving data characteristics.
+\begin{longtable}{|l|l|l|}
 \hline
-Documentation & Code & Units \\
+Documentation                       & Namelist   & Default         \\
 \hline
-\multicolumn{3}{|c|}{Forest canopy} \\
-\hline
-Canopy air space specific humidity $Q_c$ & {\tt Qcan} & kg kg$^{-1}$ \\
-Snow mass on canopy $S_v$                & {\tt Sveg} & W m$^{-2}$   \\
-Canopy air space $T_c$                   & {\tt Tveg} & K            \\
-Vegetation temperature $T_v$             & {\tt Tveg} & K            \\
+Snow-free albedo $\alpha_0$         & {\tt alb0} & 0.2             \\
+Timestep $\delta t$                 & {\tt dt}   & 3600 s          \\
+Latitude $\phi$                     & {\tt lat}  & 0$^\circ$       \\
+Local time of solar noon $h_{12}$   & {\tt noon} & 12:00           \\
+Vegetation area index $\Lambda$     & {\tt VAI}  & 0               \\
+Canopy height $h_c$                 & {\tt vegh} & 0 m             \\
+Temperature and humidity measurement height $z_T$& {\tt zT} & 2 m  \\
+Wind speed measurement height $z_U$ & {\tt zU}   & 10 m            \\
 \hline 
-\multicolumn{3}{|c|}{Surface} \\
-\hline 
-Surface skin temperature $T_*$           & {\tt Tsrf} & K            \\
-\hline 
-\multicolumn{3}{|c|}{Snow on the ground (up to {\tt Nsmax} layers)}  \\
-\hline 
-Number of snow layers $N_{\rm snow}$     & {\tt Nsnow} & -           \\
-Albedo of snow $\alpha_s$                & {\tt albs}  & -           \\
-Thickness of snow layers $D_s$           & {\tt Ds}    & m           \\
-Radii of grains in snow layers $r$       & {\tt rgrn}  & m           \\
-Ice content of snow layers $I$           & {\tt Sice}  & kg m$^{-2}$ \\
-Liquid water content of snow layers $W$  & {\tt Sliq}  & kg m$^{-2}$ \\
-Temperature of snow layers $T_s$         & {\tt Tsnow} & K           \\
-\hline 
-\multicolumn{3}{|c|} {Soil ({\tt Nsoil} layers)} \\
-\hline 
-Temperature of soil layers $T_g$ & {\tt Tsoil} & K \\
-Volumetric moisture content of soil layers $\theta_g$ & {\tt theta} & - \\
-\hline 
-\end{tabular}
+\end{longtable}
 
-Table 3. Model state variables in the code and documentation.
-
-\vskip20pt
-\begin{tabular}{|l|l|l|}
+Table 6. Parameters (subroutine {\tt FSM2\_PARAMS}).
+\begin{longtable}{|l|l|l|}
 \hline
-Documentation & Code & Default \\
+Documentation                                      & Namelist   & Default          \\
 \hline
-Snow-free albedo $\alpha_0$         & {\tt alb0} & 0.2                                 \\
-Canopy heat capacity $C_{\rm can}$  & {\tt canh} & $2500\Lambda$ (J K$^{-1}$ m$^{-2}$) \\
-Soil clay fraction $f_{\rm clay}$   & {\tt fcly} & 0.3                                 \\
-Soil sand fraction $f_{\rm sand}$   & {\tt fsnd} & 0.6                                 \\
-Sky view fraction $f_{\rm sky}$     & {\tt fsky} & $\exp(-k_{\rm dif}\Lambda)$         \\
-Canopy cover fraction $f_{\rm veg}$ & {\tt fveg} & $1 - \exp(-\Lambda)$                \\
-Canopy height $h_{\rm can}$         & {\tt hcan} & 0 m                                 \\
-Latitude $\phi$                     & {\tt lat}  & 0$^\circ$                           \\
-Vegetation area index $\Lambda$     & {\tt VAI}  & 0                                   \\
-Snow-free ground roughness length $z_{0g}$ & {\tt z0sf} & 0.1 m                        \\
-Timestep $\delta t$                 & {\tt dt}   & 3600 s                              \\
-Temperature and humidity measurement height $z_T$& {\tt zT} & 2 m                      \\
-Wind speed measurement height $z_U$ & {\tt zU}   & 10 m                                \\
-\hline 
-\end{tabular}
-
-Table 4. Site and driving data characteristics in the code and documentation.
-
-\vskip20pt
-\begin{tabular}{|l|l|l|}
-\hline
-Documentation                                      & Code       & Default                \\
-\hline
-Maximum albedo for fresh snow $\alpha_{\rm max}$   & {\tt asmx} & 0.8                    \\
-Minimum albedo for melting snow $\alpha_{\rm min}$ & {\tt asmn} & 0.5                    \\
-Snow-free vegetation albedo $\alpha_{c0}$          & {\tt avg0} & 0.1                    \\
-Snow-covered vegetation albedo $\alpha_{cs}$       & {\tt avgs} & 0.4                    \\ 
-Atmospheric stability adjustment parameter $b_h$   & {\tt bstb} & 5                      \\
-Snow thermal conductivity exponent $b_\lambda$     & {\tt bthr} & 2                      \\
-Dense canopy turbulent transfer coefficient $C_{\rm dense}$ & {\tt cden} & 0.004         \\
-Canopy snow capacity per unit VAI $c_{\rm vai}$    & {\tt cvai} & 4.4 kg m$^{-2}$        \\
-Vegetation turbulent transfer coefficient $C_{\rm veg}$ & {\tt cveg} & 20                \\
-Snow cover fraction depth scale $h_f$ & {\tt hfsn} & 0.1 m                               \\
+Snow-free dense canopy albedo $\alpha_{c0}$        & {\tt acn0} & 0.1              \\
+Snow-covered dense canopy albedo $\alpha_{cs}$     & {\tt acns} & 0.4              \\ 
+Minimum albedo for melting snow $\alpha_{\rm min}$ & {\tt asmn} & 0.5              \\
+Maximum albedo for fresh snow $\alpha_{\rm max}$   & {\tt asmx} & 0.85             \\
+Canopy element reflectivity $\alpha_{\Lambda 0}$   & {\tt avg0} & 0.27             \\
+Canopy snow reflectivity $\alpha_{\Lambda s}$      & {\tt avgs} & 0.77             \\ 
+Vegetation heat capacity per unit VAI $C_\Lambda$  & {\tt cvai} & $3.6 \times 10^4$ J K$^{-1}$ m$^{-2}$ \\
+Vegetation turbulent transfer coefficient $C_{\rm veg}$ & {\tt cveg} & 20          \\
 Reference snow viscosity $\eta_0$                  & {\tt eta0} & $3.7 \times 10^7$ Pa s \\
-Surface conductance for saturated soil $g_{\rm sat}$ & {\tt gsat} & 0.01 m s$^{-1}$      \\
-Leaf angle distribution parameter $G_1$            & {\tt Gcn1}   & 0.5                  \\
-Leaf angle distribution parameter $G_2$            & {\tt Gcn2}   & 0                    \\
-Diffuse radiation extinction coefficient $k_{\rm dif}$ & {\tt kdif} &  0.5               \\
-Fixed snow thermal conductivity $\lambda_0$        & {\tt kfix} & 0.24 W m$^{-1}$ K$^{-1}$ \\
-Canopy cover coefficient $k_{\rm veg}$             & {\tt kveg}   &  1 \\
-Displacement height to canopy height ratio $R_d$   & {\tt rchd}   & 0.67 \\
-Roughness length to canopy height ratio $R_{z0}$   & {\tt rchz}   & 0.1 \\
-Fresh snow grain radius $r_0$                      & {\tt rgr0}   & $5\times10^{-5}$ m \\
-Fixed snow density $\rho_0$                        & {\tt rho0}   & 300 kg m$^{-3}$ \\
-Temperature factor in fresh snow density $b _\rho$ & {\tt rhob}   & 0 kg m$^{-3}$ K$^{-1}$ \\
-Wind factor in fresh snow density $c_\rho$         & {\tt rhoc}   & 0 kg m$^{-7/2}$ s$^{1/2}$\\
-Fresh snow density $\rho_f$ & {\tt rhof}           & 100 kg m$^{-3}$ \\
-Maximum density for cold snow $\rho_{\rm cold}$    & {\tt rcld} & 300 kg m$^{-3}$ \\
-Maximum density for melting snow $\rho_{\rm melt}$ & {\tt rmlt} & 500 kg m$^{-3}$ \\
-Snowfall to refresh albedo $S_\alpha$ & {\tt Salb} & 10 kg m$^{-2}$ \\
+Exponential unloading timescale $\tau_u$           & {\tt eunl} & 240 hours        \\
+Soil clay fraction $f_{\rm clay}$                  & {\tt fcly} & 0.3              \\
+Soil sand fraction $f_{\rm sand}$                  & {\tt fsnd} & 0.6              \\
+Surface conductance for saturated soil $g_{\rm sat}$ & {\tt gsat} & 0.01 m s$^{-1}$\\
+Surface conductance for snow-free vegetation $g_{\rm veg}$ & {\tt gsnf} & 0.01 m s$^{-1}$   \\
+Canopy base height $h_b$                           & {\tt hbas} & 2 m              \\
+Snow cover fraction depth scale $h_f$              & {\tt hfsn} & 0.1 m            \\
+Canopy light extinction coefficient $k_{\rm ext}$  & {\tt kext} &  0.5             \\
+Fixed snow thermal conductivity $\lambda_0$        & {\tt kfix} & 0.24 W m$^{-1}$ K$^{-1}$  \\
+Leaf boundary layer resistance $r_{\rm leaf}$      & {\tt leaf} & 20 s$^{1/2}$ m$^{-1/2}$   \\ 
+Melt unloading fraction $m_u$                      & {\tt munl} & 0.4                       \\
+Maximum density for cold snow $\rho_{\rm cold}$    & {\tt rcld} & 300 kg m$^{-3}$  \\
+Fixed snow density $\rho_0$                        & {\tt rfix} & 300 kg m$^{-3}$  \\
+Fresh snow grain radius $r_0$                      & {\tt rgr0} & $5\times10^{-5}$ m  \\
+Fresh snow density $\rho_f$                        & {\tt rhof} & 100 kg m$^{-3}$  \\
+Maximum density for melting snow $\rho_{\rm melt}$ & {\tt rmlt} & 500 kg m$^{-3}$  \\
+Snowfall to refresh albedo $S_\alpha$              & {\tt Salb} & 10 kg m$^{-2}$   \\
 Thermal metamorphism parameter $c_1$ & {\tt snda}  & $2.8 \times 10^{-6}$ s$^{-1}$ \\
-Snow albedo decay temperature threshold $T_\alpha$ & {\tt Talb} & -2$^\circ$C \\
-Canopy unloading time scale $\tau_{\rm can}$ for cold snow & {\tt tcnc} & 240 h \\
-Canopy unloading time scale $\tau_{\rm can}$ for melting snow & {\tt tcnm} & 2.4 h \\
-Cold snow albedo decay time scale $\tau_{\rm cold}$ & {\tt tcld} & 1000 h \\
-Melting snow albedo decay time scale $\tau_{\rm melt}$ & {\tt tmlt} & 100 h \\
-Snow compaction time scale $\tau_\rho$ & {\tt trho} & 200 h \\
-Irreducible liquid water content of snow $W_{\rm irr}$ & {\tt Wirr} & 0.03 \\
-Ratio of roughness lengths for momentum and heat $z_0/z_{0h}$ & {\tt z0zh} & 10 \\
-Snow surface roughness length $z_{0s}$ & {\tt z0sn} & 0.01 m \\
+Intercepted snow capacity per unit VAI $S_\Lambda$ & {\tt svai} & 4.4 kg m$^{-2}$  \\
+Snow albedo decay temperature threshold $T_\alpha$ & {\tt Talb} & -2$^\circ$C      \\
+Cold snow albedo decay time scale $\tau_{\rm cold}$& {\tt tcld} & 1000 hours       \\
+Melting snow albedo decay time scale $\tau_{\rm melt}$ & {\tt tmlt} & 100 hours    \\
+Snow compaction time scale $\tau_\rho$             & {\tt trho} & 200 hours        \\
+Temperature unloading parameter $C_T$              & {\tt Tunl} & $1.87 \times 10^5$ K s  \\
+Wind unloading parameter $C_U$                     & {\tt Uunl} & $1.56 \times 10^5$ m    \\
+Canopy wind decay coefficient $\eta$               & {\tt wcan} & 2.5              \\
+Irreducible liquid water content of snow $W_{\rm irr}$ & {\tt Wirr} & 0.03         \\
+Snow-free surface roughness length $z_{0f}$        & {\tt z0sf} & 0.1 m            \\
+Snow surface roughness length $z_{0s}$             & {\tt z0sn} & 0.001 m          \\
 \hline
-\end{tabular}
+\end{longtable}
+}
 
-Table 5. Model parameters in the code and documentation.
+\section{Driving data (subroutine {\tt FSM2\_DRIVE})}
 
-\section*{Appendix: Solar radiation}
+1D driving data are read from a text file with optional formats described in the FSM2 User Guide. A minimum wind speed of 0.1 m s$^{-1}$ is imposed to avoid dividing by small numbers in aerodynamic calculations.
 
-Following \href{https://www.elsevier.com/books/an-introduction-to-solar-radiation/iqbal/978-0-12-373750-2}{Iqbal (1983)}, solar declination $\delta$ (in radians) and equation of time $E_t$ (in hours) are approximated by Fourier series
+\subsection{FSM format driving data (option {\tt DRIV1D 1})}
+
+Assuming that relative humidity is measured with respect to water at all temperatures, specific humidity is calculated as
+\begin{equation}
+Q_a = \frac{RH}{100}\frac{\varepsilon e_0}{P_s}\exp\left(\frac{17.5043T_a}{241.3 + T_a}\right)
+\end{equation}
+for air temperature in $^\circ$C.
+
+\subsection{ESM-SnowMIP format driving data (option {\tt DRIV1D 2)}}
+
+Specific humidity is included in ESM-SnowMIP driving data files.
+
+
+\subsection{Shortwave radiation partitioning (option {\tt SWPART 1})}
+
+Subroutine {\tt SOLARPOS} approximates solar declination $\delta$ (radians) and equation of time $E_t$ (hours) by Fourier series
 \begin{align}
 \delta = 0.006918 &- 0.399912\cos\Gamma  + 0.070257\sin\Gamma  \nonumber \\
                   &- 0.006758\cos2\Gamma + 0.000907\sin2\Gamma \nonumber \\
                   &- 0.002697\cos3\Gamma + 0.001480\sin3\Gamma
 \end{align}
 and
-\begin{align}
-E_t = (12/\pi)(0.000075 &+ 0.001868\cos\Gamma  - 0.032077\sin\Gamma \nonumber \\
-                        &- 0.014615\cos2\Gamma - 0.04089\sin2\Gamma)
-\end{align}
-for day of year $d_n$ and day angle $\Gamma = 2\pi(d_n - 1)/365$. From a date given by intergers $y$, $m$ and $d$ for year, month and day, the day of year can be found using integer division in the magic formula
+\begin{equation}
+E_t = (12/\pi)(0.000075 + 0.001868\cos\Gamma  - 0.032077\sin\Gamma 
+                        - 0.014615\cos2\Gamma - 0.04089\sin2\Gamma)
+\end{equation}
+for day of year $d_n$ and day angle $\Gamma = 2\pi(d_n - 1)/365$. From a date given by integers $y$, $m$ and $d$ for year, month and day, the day of year can be found using integer division in the magic formula
 \begin{equation}
 d_n = (7y)/4 - 7(y+(m+9)/12)/4 + (275m)/9 + d - 30.
 \end{equation}
-
-For hour $h$ of a day at latitude $\phi$, the hour angle is defined by
+For hour $h$ of a day, the hour angle is defined by
 \begin{equation}
-\omega = (\pi/12)(12 - h - E_t),
+\omega = (\pi/12)(h_{12} - h - E_t),
 \end{equation}
 the sine of the solar elevation is
 \begin{equation}
@@ -651,33 +225,851 @@ and the cosine of the solar azimuth is
 \end{equation}
 Azimuth is measured anticlockwise from south, so $\psi$ has the same sign as $\omega$ (positive in the morning and negative in the afternoon).
 
-Separate direct and diffuse components of shortwave radiation are estimated by the empirical method of \href{https://www.sciencedirect.com/science/article/pii/0038092X82903024}{Erbs et al. (1982)} if they are required but have not been measured. First, an atmospheric clearness parameter is found by dividing the global radiation by the radiation at the top of the atmosphere, giving
+An atmospheric clearness parameter is found by dividing global radiation at the surface by incoming radiation at the top of the atmosphere, giving
 \begin{equation}
-k_t = \frac{SW_\downarrow}{I_o\sin\theta},
+k_t = \frac{SW_\downarrow}{I_0\sin\theta}.
 \end{equation}
-where $I_0$ = 1367 Wm$^{-2}$ is the solar constant. The diffuse fraction is then estimated as
+The diffuse fraction of shortwave radiation is then estimated as
 \begin{equation}
-\frac{S_{\rm dif}}{S_0} = \begin{cases}
-    1 - 0.09k_t &  k_t<0.22  \\
-    0.95-0.16k_t+4.39k_t^2-16.64k_t^3+12.34k_t^4 &  0.22<k_t<0.8  \\
-    0.165 &  k_t>0.8
+\frac{S_{\rm dif}}{SW_\downarrow} = \begin{cases}
+    1 - 0.09k_t &  k_t \leq 0.22  \\
+    0.95-0.16k_t+4.39k_t^2-16.64k_t^3+12.34k_t^4 &  0.22 < k_t \leq 0.8  \\
+    0.165 &  k_t>0.8.
 \end{cases}
 \end{equation}
-Direct radiation is the remainder $S_{\rm dir} = S_0 - S_{\rm dif}$.
+Direct-beam shortwave radiation is the remainder $S_{\rm dir} = SW_\downarrow - S_{\rm dif}$.
 
-If a digital elevation model is provided as an input, the array of elevations is assumed to follow the convention that the first row is at the north of the model domain and the first column is at the west. 
+\section{Forest canopy properties (subroutine {\tt CANOPY})}
+
+A one-layer canopy model (option {\tt CANMOD 1}) has vegetation area index $\Lambda$ provided as an input. The layers in a two-layer model ({\tt CANMOD 2}) have vegetation area indices $\Lambda_1 = f_\Lambda\Lambda$ (upper) and $\Lambda_2 = (1 - f_\Lambda)\Lambda$ (lower). A canopy layer with intercepted snow has heat capacity $C_v = C_\Lambda\Lambda + c_{\rm ice}S_v$, snow interception capacity $S_c = S_\Lambda\Lambda$ and snow cover fraction
 \begin{equation}
-\tan^{-1}\left[\sqrt{\left(\frac{dz}{dx}\right)^2 + \left(\frac{dz}{dy}^2\right)}\right]
+f_{cs} = \left(\frac{S_v}{S_c}\right)^{2/3}.
 \end{equation}
+Vegetation layer temperatures at the start of the timestep are saved for use in subroutine {\tt SRFEBAL}.
+
+\section{Shortwave radiation (subroutine {\tt SWRAD})}
+
+\subsection{Ground albedos}
+
+Bare ground with albedo $\alpha_0$ and snow cover fraction $f_s$ with albedo $\alpha_s$ have average albedo
 \begin{equation}
-- \tan^{-1}\left(\frac{dz}{dy}\middle/\frac{dz}{dx}\right) - \frac{\pi}{2}
-\end{equation}
-Aspect is calculated to follow the same convention as solar azimuth and the Fortran {\tt atan2} function is used to obtain the correct quadrant. Grid cells are indexed by row number $i$ from north to south and column number $j$ from west to east. The surface gradient is calculated by centred differences
+\alpha = (1 - f_s)\alpha_0 +f_s\alpha_s.
+\end{equation} 
+The snow cover fraction for snow depth $h_s$ is
 \begin{equation}
-\left(\frac{dz}{dx},\frac{dz}{dy}\right)_{ij} = 
-\left(\frac{z_{i,j+1} - z_{i,j-1}}{2\Delta x}, \frac{z_{i+1,j} - z_{i-1,j}}{2\Delta x}\right)
+f_s = \min\left(\frac{h_s}{h_f},1\right)
 \end{equation}
-for grid spacing $\Delta x$.
+for option {\tt SNFRAC 1},
+\begin{equation}
+f_s = \tanh\left(\frac{h_s}{h_f}\right)
+\end{equation}
+for {\tt SNFRAC 2} and
+\begin{equation}
+f_s = \frac{h_s}{h_s + h_f}
+\end{equation}
+for {\tt SNFRAC 3}.
+
+\subsubsection{Diagnosed snow albedo (option {\tt ALBEDO 1})}
+
+Snow albedo is diagnosed as a function of surface temperature 
+\begin{equation}
+\alpha_s = \alpha_{\rm min} + (\alpha_{\rm max} - \alpha_{\rm min})
+           \min\left(\frac{T_s - T_m}{T_\alpha}, 1\right).        
+\end{equation}
+
+\subsubsection{Prognostic snow albedo (option {\tt ALBEDO 2})}
+
+Snow albedo decreases with time and increases as fresh snow falls with update
+\begin{equation}
+\alpha_s \rightarrow \alpha_s + (\alpha_{\rm lim} - \alpha_s)(1-e^{-\gamma\delta t}) 
+\end{equation}
+each timestep, where
+\begin{equation}
+\gamma = \frac{1}{\tau_\alpha}+\frac{S_f}{S_\alpha}
+\end{equation}
+and
+\begin{equation}
+\alpha_{\rm lim} = \frac{1}{\gamma}\left(\frac{1}{\tau_\alpha}\alpha_{\rm min} +\frac{S_f}{S_\alpha}\alpha_{\rm max}\right).
+\end{equation}
+Timescale $\tau_\alpha$ has different values $\tau_{\rm cold}$ and $\tau_{\rm melt}$ for cold and melting snow.
+
+\subsection{Canopy reflection and transmission (subroutine {\tt SWRAD})}
+
+A canopy layer has reflectivities $R_b$, $R_d$ and transmissivities $\tau_b$, $\tau_d$ for direct-beam and diffuse radiation, respectively, and forward-scattering fraction $s_b$ for direct-beam radiation. Upwards and downwards shortwave radiation fluxes at the top and bottom of canopy layers are found by solving a matrix equation
+\begin{equation}
+\begin{pmatrix}
+1       & -R_d     & 0 \\
+-\alpha & 1        & 0 \\
+0       & -\tau_d  & 1 \\
+\end{pmatrix}
+\begin{pmatrix}
+S_{\downarrow 1} \\
+S_{\uparrow 1}   \\
+S_{\uparrow 0}   \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+\tau_d  \\
+0       \\
+R_d     \\
+\end{pmatrix}
+S_{\downarrow\rm dif} +
+\begin{pmatrix}
+s_b           \\
+\alpha\tau_b  \\
+R_b           \\
+\end{pmatrix}
+S_{\downarrow\rm dir}
+\label{eq:canmod1}
+\end{equation}
+for a one-layer model or
+\begin{equation}
+\begin{pmatrix}
+1           & 0       & 0           & -R_{d,1}    & 0 \\
+-\tau_{d,2} & 1       & -R_{d,2}    & 0           & 0 \\
+0           & -\alpha & 1           & 0           & 0 \\
+-R_{d,2}    & 0       & -\tau_{d,2} & 1           & 0 \\
+0           & 0       & 0           & -\tau_{d,1} & 1 \\
+\end{pmatrix}
+\begin{pmatrix}
+S_{\downarrow 1} \\
+S_{\downarrow 2} \\
+S_{\uparrow 2}   \\
+S_{\uparrow 1}   \\
+S_{\uparrow 0}   \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+\tau_{d,1} \\
+0          \\
+0          \\
+0          \\
+R_{d,1}    \\
+\end{pmatrix}
+S_{\downarrow\rm dif} +
+\begin{pmatrix}
+s_{b,1}                    \\
+s_{b,2}\tau_{b,1}          \\
+\alpha\tau_{b,1}\tau_{b,2} \\
+R_{b,2}\tau_{b,1}          \\
+R_{b,1}                    \\
+\end{pmatrix}
+S_{\downarrow\rm dir}
+\label{eq:canmod2}
+\end{equation}
+for a two-layer model. Net shortwave radiation absorbed by vegetation in canopy layers and the underlying snow or ground surface are
+\begin{gather}
+SW_v = S_{\downarrow\rm dif} - S_{\downarrow 1} + S_{\uparrow 1} - S_{\uparrow 0}
+         + (1 - \tau_b)S_{\downarrow\rm dir}, \\
+SW_s = (1-\alpha)(S_{\downarrow 1} + \tau_b S_{\downarrow\rm dir})
+\end{gather}
+for a one-layer model, and
+\begin{gather}
+SW_{v,1} = S_{\downarrow\rm dif} - S_{\downarrow 1} + S_{\uparrow 1} - S_{\uparrow 0} +
+          (1 - \tau_{b,1})S_{\downarrow\rm dir}, \\
+SW_{v,2} = S_{\downarrow 1} - S_{\downarrow 2} + S_{\uparrow 2} - S_{\uparrow 1} +
+          \tau_{b,1}(1 - \tau_{b,2})S_{\downarrow\rm dir}, \\
+SW_s = (1-\alpha)(S_{\downarrow 2} + \tau_{b,1}\tau_{b,2}S_{\downarrow\rm dir})
+\end{gather}
+for a two-layer model. Equations (\ref{eq:canmod1}) and (\ref{eq:canmod2}) are solved by LU decomposition (subroutine {\tt LUDCMP}).
+
+\subsubsection{Beer's Law (option {\tt CANRAD 1})}
+
+The fractions of radiation transmitted without interception through a canopy layer are
+\begin{equation}
+\tau_b = \exp(-k_{\rm ext}\Lambda/\sin\theta)
+\end{equation}
+and
+\begin{equation}
+\tau_d = \exp(-1.6k_{\rm ext}\Lambda).
+\end{equation}
+Diffuse and direct-beam canopy layer reflectivities are $R_d = (1-\tau_d)\alpha_c$ and $R_b = (1-\tau_b)\alpha_c$ for dense canopy albedo
+\begin{equation}
+\alpha_c = (1 - f_{cs})\alpha_{c0} + f_{cs}\alpha_{cs}
+\end{equation}
+and the forward-scattering fraction is zero.
+
+\subsubsection{Two-stream approximation (option {\tt CANRAD 2}, subroutine {\tt TWOSTREAM})}
+
+For flat, opaque and randomly oriented leaves, 
+\begin{equation}
+\omega = (1 - f_{cs})\alpha_{\Lambda 0} + f_{cs}\alpha_{\Lambda s}
+\end{equation}
+is the fraction of incident radiation that is scattered, $\beta = 2/3$ is the fraction of scattered diffuse radiation that is directed back into the upward hemisphere and
+\begin{equation}
+\beta_0 = (0.5 + \mu)\left[1 - \mu\ln\left(\frac{1 + \mu}{\mu}\right)\right]
+\end{equation}
+is the upscatter fraction for direct-beam radiation with $\mu = \sin\theta$. Two-stream equations involve coefficients
+\begin{equation}
+\gamma_1 = 2[1 - (1 - \beta)\omega],\ \gamma_2 = 2\beta\omega,\ \gamma_3 = \beta_0,\ \gamma_4 = 1 - \beta_0.
+\end{equation}
+The reflectivity and transmittivity of a canopy layer for diffuse radiation are
+\begin{equation}
+R_d = \frac{\gamma_2(1 - e^{-2kl})}{k + \gamma_1 + (k - \gamma_1)e^{-2kl}}
+\label{eq:rdif}
+\end{equation}
+and
+\begin{equation}
+\tau_d = \frac{2ke^{-kl}}{k + \gamma_1 + (k - \gamma_1)e^{-2kl}}
+\end{equation}
+for extinction coefficient $k = (\gamma_1^2 - \gamma_2^2)^{1/2}$ and optical thickness $l = k_{\rm ext}\Lambda$. The direct-beam reflectivity, forward scattering fraction and transmissivity are
+\begin{equation}
+R_b = \frac
+{\omega[(1 - k\mu)(\alpha_2 + k\gamma_3)e^{kl} - (1 + k\mu)(\alpha_2 - k\gamma_3)e^{-kl} - 2k(\gamma_3 - \alpha_2\mu)e^{-l/\mu}]} {(1 - k^2\mu^2)[(k + \gamma_1)e^{kl} + (k - \gamma_1)e^{-kl}]}
+\end{equation}
+and
+\begin{equation}
+s_b = \frac{\omega e^{-l/\mu}[(1 - k\mu)(\alpha_1 - k\gamma_4)e^{-kl} - (1 + k\mu)(\alpha_1 + k\gamma_4)e^{kl}] + 2k\omega(\gamma_4 + \alpha_1\mu)}
+{(1 - k^2\mu^2)[(k + \gamma_1)e^{kl} + (k - \gamma_1)e^{-kl}]},
+\end{equation}
+and
+\begin{equation}
+\tau_b = e^{-l/\mu}
+\end{equation}
+where $\alpha_1 = \gamma_1\gamma_4 + \gamma_2\gamma_3$ and $\alpha_2 = \gamma_1\gamma_3 + \gamma_2\gamma_4$.
+
+\section{Thermal properties (subroutine {\tt THERMAL})}
+
+\subsection{Snow}
+The thermal conductivity of a snow layer of density $\rho_s$ is a fixed parameter for option {\tt CONDCT 0} and 
+\begin{equation}
+\lambda_{sn} = 2.224\left(\frac{\rho_s}{\rho_{\rm wat}}\right)^{1.885}
+\end{equation}
+for {\tt CONDCT 1}. 
+
+\subsection{Soil}
+Clapp-Hornberger exponent
+\begin{equation}
+b = 3.1 + 15.7f_{\rm clay} - 0.3f_{\rm sand},
+\end{equation}
+dry soil heat capacity
+\begin{equation}
+c_{\rm dry} = \frac{2.128\times10^6f_{\rm clay} + 2.385\times10^6f_{\rm sand}}{f_{\rm clay} + f_{\rm sand}},
+\end{equation}
+saturated soil water suction
+\begin{equation}
+\Psi_s = 10^{0.17 - 0.63f_{\rm clay} - 1.58f_{\rm sand}},
+\end{equation}
+volumetric soil moisture at saturation
+\begin{equation}
+V_{\rm sat} = 0.505 - 0.037f_{\rm clay} - 0.142f_{\rm sand},
+\end{equation}
+volumetric soil moisture at the critical point
+\begin{equation}
+V_{\rm crit} = V_{\rm sat}\left(\frac{\Psi_s}{3.364}\right)^{1/b}
+\end{equation}
+and dry soil thermal conductivity
+\begin{equation}
+\lambda_{\rm dry} = \lambda_{\rm air}^{V_{\rm sat}}(\lambda_{\rm clay}^{f_{\rm clay}}\lambda_{\rm sand}^{1 - f_{\rm clay}})^{1 - V_{\rm sat}}
+\end{equation}
+are derived from soil texture fractions $f_{\rm clay}$ and $f_{\rm sand}$ at the start of the run.
+
+The temperature derivative of soil water suction $\Psi$ in the presence of ice is
+\begin{equation}
+\frac{d\Psi}{dT} = - \frac{\rho_{\rm ice}L_f}{g\rho_{\rm wat}T_m}.
+\end{equation}
+For a layer with volumetric soil moisture content $V_s$, the temperature above which all soil moisture is unfrozen is 
+\begin{equation}
+T_{\rm max} = T_m + \Psi_s\left(\frac{d\Psi}{dT}\right)^{-1}\left(\frac{V_{\rm sat}}{V_s}\right)^b.
+\end{equation}
+The apparent areal heat capacity of a soil layer of thickness $\Delta z_{\rm sl}$ and Celsius temperature $T_c = T_{\rm sl} - T_m$, including the influence of soil moisture phase change, is
+\begin{equation}
+C_{sl} = (c_{\rm dry} + \rho_{\rm ice}c_{\rm ice}\theta_f + \rho_{\rm wat}c_{\rm wat}\theta_u)\Delta z_{\rm sl} +      
+               \rho_{\rm wat}\Delta z_{\rm sl}[(c_{\rm wat} - c_{\rm ice})T_c + L_f]\frac{d\theta_u}{dT}
+\end{equation}
+for
+\begin{equation}
+\frac{d\theta_u}{dT} = - \frac{d\Psi}{dT}\frac{V_{\rm sat}}{b\Psi_s}
+                         \left(\frac{T_c}{\Psi_s}\frac{d\Psi}{dT}\right)^{-1/b-1}.
+\end{equation}
+The thermal conductivity of wet soil is
+\begin{equation}
+\lambda_{sl} = (\lambda_{\rm sat} - \lambda_{\rm dry})(S_f + S_u) + \lambda_{\rm dry}
+\end{equation}
+with
+\begin{equation}
+\lambda_{\rm sat} = \frac{\lambda_{\rm soil}\lambda_{\rm wat}^{\theta_{\rm wat}}\lambda_{\rm ice}^{\theta_{\rm ice}}}        
+                         {\lambda_{\rm air}^{V_{\rm sat}}}
+\end{equation}
+for
+\begin{equation}
+\theta_{\rm ice} = \frac{S_f}{S_f + S_u}V_{\rm sat},\quad
+\theta_{\rm wat} = \frac{S_u}{S_f + S_u}V_{\rm sat}.
+\end{equation}
+
+\subsection{Surface layer}
+Surface fluxes are calculated using the thermal properties of a surface layer of thickness $\Delta z_1 = \max(\Delta z_{sl,1},D_{sn,1})$ that can include both snow and soil for shallow snow. The average temperature of this layer is 
+\begin{equation}
+T_1 = 
+\begin{cases}
+      T_{sl,1} + (T_{sn,1} - T_{sl,1})\frac{D_{sn,1}}{\Delta z_{sl,1}}  & h_s \leq \Delta z_{sl,1} \\
+      T_{sn,1}                                                & h_s > \Delta z_{sl,1} \\
+\end{cases}
+\end{equation}
+and the thermal conductivity between the surface and the middle of the layer if snow free is
+\begin{equation}
+\lambda_1 = 
+\begin{cases}
+      \Delta z_{sl,1}\left(\frac{2D_{sn,1}}{\lambda_{sn,1}} + \frac{\Delta z_{sl,1} - 2D_{sn,1}}{\lambda_{sl,1}}\right)^{-1}  & h_s \leq 0.5\Delta z_{sl,1} \\
+      \lambda_{sn}                                                & h_s > 0.5\Delta z_{sl,1} \\
+\end{cases}
+\end{equation}
+The moisture conductance for evaporation between this layer and the atmosphere is
+\begin{equation}
+g_1 = g_{\rm sat}\left(\frac{\theta_u}{V_{\rm crit}}\right)^2.
+\end{equation}
+
+\section{Surface and canopy energy balance (subroutine {\tt SRFEBAL})}
+
+Quantities set before starting the iterative solution of the surface energy balance are:
+\begin{itemize}[leftmargin=*]
+\item temperature and wind speed measurement heights $z_T$ and $z_U$, incremented by $h_c$ if specified above the canopy height (option {\tt ZOFFST 1});
+\item canopy layer heights $z_1 = h_b + (h_c-h_b)/2$ (one layer) or $z_1 = (1 - f_\Lambda/2)h_c$ and $z_2 = (1 - f_\Lambda)h_c/2$ (two layers);
+\item vegetation fraction $f_v = 1 - \exp(-k_{\rm ext}\Lambda)$;
+\item vegetation roughness length $z_{0v} = 0.1h_c$ and displacement height $d = 0.67h_c$; 
+\item momentum roughness length $z_0 = z_{0s}^{f_s}z_{0f}^{1-f_s}$;
+\item scalar roughness length $z_{0h} = 0.1z_0$;
+\item air density $P_s/(R_{\rm air}T_a)$.
+\end{itemize}
+Saturation humidity (function {\tt qsat}) and latent heat
+\begin{equation}
+q_{\rm sat}(T,P_s) = 
+\begin{cases}
+     \frac{\varepsilon e_0}{P_s}\exp\left(\frac{22.4422T_a}{272.186 + T_a}\right), \quad L = L_s   & T \leq T_m \\
+     \frac{\varepsilon e_0}{P_s}\exp\left(\frac{17.5043T_a}{241.3 + T_a}\right), \quad L = L_v  & T > T_m  \\
+\end{cases}
+\end{equation}
+and gradient 
+\begin{equation}
+D = \frac{dq_{\rm sat}}{dT} = \frac{Lq_{\rm sat}}{R_{\rm wat}T^2}
+\end{equation}
+are set wherever required below for surface or vegetation temperatures.
+
+\subsection{Open areas ($\Lambda = 0$)}
+
+The reciprocal of the Obukhov length, the friction velocity and the aerodynamic conductance are
+\begin{gather}
+\frac{1}{L_O} = - \frac{kgg_a(T_s - T_a)}{T_au_*^3}, \\
+u_* = kU_a\left[\ln\left(\frac{z_U}{z_0}\right) -
+                \psi_m\left(\frac{z_U}{L_O}\right) + \psi_m\left(\frac{z_0}{L_O}\right)\right]^{-1}
+\end{gather}
+and
+\begin{equation}
+g_a = ku_*\left[\ln\left(\frac{z_T}{z_{0h}}\right) -
+                \psi_h\left(\frac{z_T}{L_O}\right) + \psi_h\left(\frac{z_{0h}}{L_O}\right)\right]^{-1},
+\end{equation}
+with $\psi_h$ and $\psi_m$ set to zero for option {\tt EXCHNG 0} and calculated by functions {\tt psih} and {\tt psim} for {\tt EXCHNG 1}. The surface miosture flux, ground heat flux, sensible heat flux and net radiation are 
+\begin{gather}
+E = \rho\chi_sg_a[q_{\rm sat}(T_s) - q_a], \\
+G = \frac{2\lambda_1}{\Delta z_1}(T_s - T_1), \\
+H = \rho c_pg_a(T_s - T_a), \\
+R_s = SW_s + LW_\downarrow - \sigma T_s^4,
+\end{gather}
+with water availability factor $\chi_s = 1$ if $q_a > q_{\rm sat}$ and
+\begin{equation}
+\chi_s = f_s + \frac{(1 - f_s)g_1}{g_a + g_1}
+\end{equation}
+otherwise. The surface temperature and flux increments are first calculated assuming no snow melt ($M = 0$) as
+\begin{gather}
+\delta T_s = \frac{R_s - G - H - LE - L_fM}{4\sigma T_s^3 + 2\lambda_1/\Delta z_1 + \rho g_a(c_p + LD\chi_s)}, \\
+\delta E = \rho\chi_sg_aD\delta T_s, \\
+\delta G = \frac{2\lambda_1}{\Delta z_1}\delta T_s
+\end{gather}
+and
+\begin{equation}
+\delta H = \rho c_pg_a\delta T_s.
+\end{equation}
+If this gives a temperature $T_s + \delta T_s > T_m$ and there is snow with ice mass $I$ on the ground, the temperature and flux increments are recalculated with $M = I / \delta t$ (all of the snow melts). If then $T_s + \delta T_s < T_m$, not all of the snow melts and the fluxes are recalculated with $T_s = T_m$ and the melt rate is diagnosed as
+\begin{equation}
+M =  (R_s - G - H - LE)/L_f.
+\end{equation}
+The increments are added to the surface temperature and fluxes, and the surface energy balance residual
+\begin{equation}
+\epsilon =  R_s - G - H - LE - L_fM
+\end{equation}
+is calculated. At least four iterations and at most ten are made, terminating earlier if $|\epsilon | < 0.01$ W m$^{-2}$.
+
+\subsection{Forest ($\Lambda > 0$)}
+
+Aerodynamic quantities for forests are calculated as weighted averages between open and dense-canopy values, according to the vegetation fraction. The friction velocity, aerodynamic conductance between the highest canopy layer and the atmosphere, and aerodynamic conductance between the lowest canopy layer and the ground for a dense canopy are
+\begin{gather}
+u_{*d} = kU_a\left[\ln\left(\frac{z_U-d}{z_{0v}}\right) - \psi_m\left(\frac{z_U-d}{L_O}\right) + \psi_m\left(\frac{z_{0v}}{L_O}\right)\right]^{-1}, \\
+g_{ad} = \left\{\frac{1}{ku_*}\left[\ln\left(\frac{z_T-d}{h_c-d}\right) 
+      - \psi_H\left(\frac{z_T-d}{L_O}\right) + \psi_H\left(\frac{h_c-d}{L_O}\right)\right]
+      + \frac{h_c\left[e^{\eta(1-z_1/h_c)}-1\right]}{\eta K_H}\right\}^{-1}
+\end{gather}
+and
+\begin{equation}
+g_{sd} = \left[\frac{1}{k^2U_b}\ln\left(\frac{h_b}{z_0}\right)\ln\left(\frac{h_b}{z_{0h}}\right) +
+       \frac{e^\eta h_c}{\eta K_H}\left(e^{-\eta h_b/h_c} - e^{-\eta z_N/h_c}\right)\right]^{-1}
+\end{equation}
+with
+\begin{equation}
+K_H = 
+\begin{cases}
+    ku_*(h_c-d)/[1 + 5(h_c -d)/L_O]        & L_O > 0 \\
+    ku_*(h_c-d)[1 - 16(h_c - d)/L_O]^{1/2} &  L_O < 0.
+\end{cases}
+\end{equation}
+Conductance between a vegetation layer and its corresponding canopy air space is 
+\begin{equation}
+g_v = \frac{U_c^{1/2}\Lambda_n}{r_{\rm leaf}}
+\end{equation}
+for canopy wind speed
+\begin{equation}
+U_c = f_v\exp\left[\eta\left(\frac{z_n}{h_c} - 1\right)\right]U_h  + 
+      (1 - f_v)\frac{u_*}{k}\left[\ln\left(\frac{z_n}{z_0}\right) - \psi_m\left(\frac{z_n}{L_O}\right) + \psi_m\left(\frac{z_0}{L_O}\right)\right]
+\end{equation}
+and canopy-top wind speed
+\begin{equation}
+U_h = \frac{u_*}{k}\left[\ln\left(\frac{h_c-d}{z_{0v}}\right) - \psi_m\left(\frac{h_c-d}{L_O}\right) + \psi_m\left(\frac{z_{0v}}{L_O}\right)\right].
+\end{equation}
+If there are two canopy layers, the conductance between the air spaces is
+\begin{equation}
+g_c = \frac{f_v\eta K_H}{e^\eta h_c}\left(e^{-\eta z_2/h_c} - e^{-\eta z_1/h_c}\right)^{-1} +
+      (1 - f_v)ku_*\left[\ln\left(\frac{z_1}{z_2}\right) - \psi_m\left(\frac{z_1}{L_O}\right) + \psi_m\left(\frac{z_2}{L_O}\right)\right]^{-1}.
+\end{equation}
+The water availability factor for a canopy layer with snow cover fraction $f_{cs}$ is $\chi_v = 1$ if $q_c > q_{\rm sat}(T_v)$ and
+\begin{equation}
+\chi_v = f_{cs} + \frac{(1 - f_{cs})g_{\rm veg}}{g_v + g_{\rm veg}}
+\end{equation}
+otherwise.
+
+\subsubsection{One-layer canopy (option {\tt CANMOD 1})}
+
+Sensible heat fluxes are
+\begin{equation}
+H = \rho c_p g_a(T_c - T_a)
+\end{equation}
+from the canopy air space to the atmosphere,
+\begin{equation}
+H_v = \rho c_p g_v(T_v - T_c)
+\end{equation}
+from vegetation to the canopy air space, and
+\begin{equation}
+H_s = \rho c_p g_s(T_s - T_c)
+\end{equation}
+from the snow or ground surface to the canopy air space. The corresponding moisture fluxes are
+\begin{gather}
+E = \rho g_a(q_c - q_a), \\
+E_v = \chi_v\rho g_v[q_{\rm sat}(T_v) - q_c],
+\end{gather}
+and
+\begin{equation}
+E_s = \chi_s\rho g_s[q_{\rm sat}(T_s) - q_c].
+\end{equation}
+Net radiation absorbed by the surface and the vegetation are
+\begin{equation}
+R_s = SW_s + \tau_d LW_\downarrow - \sigma T_s^4 + (1-\tau_d)\sigma T_v^4 
+\end{equation}
+and
+\begin{equation}
+R_v = SW_v + (1 - \tau_d)(LW_\downarrow + 4\sigma T_s^4 - 2\sigma T_v^4).
+\end{equation}
+State variable increments in a vector
+\begin{equation}
+{\bf \delta x} = (\delta T_s, \delta Q_c, \delta T_c, \delta T_v)
+\end{equation} 
+are found by using LU decomposition to solve matrix equation ${\rm J}{\bf \delta x} = {\bf f}$ with Jacobian matrix elements
+\begin{gather}
+J_{11} = -\rho g_s(c_p+LD\chi_s) - 4\sigma T_s^3 - 2k_1/\Delta z_1, \quad
+J_{12} = L\rho\chi_s g_s, \quad J_{13} = \rho c_p g_s, \quad J_{14} = 4(1 - \tau_d)\sigma T_v^3, \nonumber \\
+J_{21} = 4(1 - \tau_d)\sigma T_s^3, \quad J_{22} = L\rho\chi_v g_v, \quad J_{23} = \rho c_p g_v, \nonumber \quad
+J_{24} = -\rho g_v(c_p+LD\chi_v) - 8(1-\tau_d)\sigma T_v^3 - C_v \delta t, \nonumber \\
+J_{31} = -g_s, \quad J_{32} = 0, \quad J_{33} = g_a+g_s+g_v, \quad J_{34} = -g_v, \nonumber \\
+J_{41} = -D\chi_s g _s, \quad J_{42} = g_a +\chi_s g_s + \chi_v g_v, \quad J_{43} = 0, \quad J_{44} = -D\chi_v g_v
+\end{gather}
+and flux conservation vector elements
+\begin{gather}
+f_1 = -(R_s - G_s - H_s - LE_s), \nonumber \\
+f_2 = -[R_v - H_s - LE_s - C_v(T_v - T_v^{(0)})/\delta t], \nonumber \\
+f_3 = -(H - H_s - H_v)/(\rho c_p), \nonumber \\
+f_4 = -(E - E_s - E_v)/\rho.
+\end{gather}
+The flux increments are then
+\begin{gather}
+\delta E_s = \rho \chi_s g_s(D\delta T_s - \delta Q_c), \nonumber \\
+\delta E_v = \rho \chi_v g_v(D\delta T_v - \delta Q_c), \nonumber \\
+\delta G_s = 2 k_1\delta T_s / \Delta z_1, \nonumber \\
+\delta H_s = \rho c_p g_s(\delta T_s - \delta T_c), \nonumber \\
+\delta H_v = \rho c_p g_v(\delta T_v - \delta T_c).
+\end{gather}
+
+\subsubsection{Two-layer canopy (option {\tt CANMOD 2})}
+
+Sensible heat fluxes are
+\begin{equation}
+H = \rho c_p g_a(T_{c,1} - T_a)
+\end{equation}
+from the canopy air space to the atmosphere,
+\begin{equation}
+H_{v,n} = \rho c_p g_{v,n}(T_{v,n} - T_{c,n})
+\end{equation}
+from vegetation layer $n$ to canopy air space layer $n$, and
+\begin{equation}
+H_s = \rho c_p r_s(T_s - T_{c,2})
+\end{equation}
+from the ground to the lower canopy air space. The flux between the canopy air space layers is
+\begin{equation}
+H_c = \rho c_p g_c(T_{c,2} - T_{c,1}).
+\end{equation}
+The corresponding moisture fluxes are
+\begin{gather}
+E = \rho g_a(q_{c,1} - q_a), \\
+E_{v,n} = \chi_{v,n}\rho g_{v,n}[q_{\rm sat}(T_{v,n}) - q_{c,n}], \\
+E_s = \chi_s\rho g_s[q_{\rm sat}(T_s) - q_{c,2}]
+\end{gather}
+and
+\begin{equation}
+E_c = \rho g_c(q_{c,2} - q_{c,1}).
+\end{equation}
+Net radiation absorbed by the surface and the vegetation layers are
+\begin{gather}
+R_s = SW_s + \tau_{d,1}\tau_{d,2}LW_\downarrow + (1-\tau_{d,1})\tau_{d,2}\sigma T_{v,1}^4 + (1-\tau_{d,2})\sigma T_{v,2}^4 
+           - \sigma T_s^4, \\
+R_{v,1} = SW_{v,1} + (1 - \tau_{d,1})[LW_\downarrow - 2\sigma T_{v,1}^4 + (1-\tau_{d,2})\sigma T_{v,2}^4 + \tau_{d,2}\sigma T_s^4]
+\end{gather}
+and
+\begin{equation}
+R_{v,2} = SW_{v,2} + (1 - \tau_{d,2})[\tau_{d,1}LW_\downarrow + (1 - \tau_{d,1})\sigma T_{v,1}^4 - 2\sigma T_{v,2}^4 + \sigma T_s^4].
+\end{equation}
+State variable increments in a vector
+\begin{equation}
+{\bf \delta x} = (\delta T_s, \delta Q_{c,1}, \delta T_{c,1}, \delta T_{v,1}, \delta Q_{c,2}, \delta T_{c,2}, \delta T_{v,2})
+\end{equation} 
+are found by using LU decomposition to solve matrix equation ${\rm J}{\bf \delta x} = {\bf f}$ with non-zero Jacobian matrix elements  
+\begin{gather}
+J_{11} = -(c_p + LD\psi_g)\rho g_s - 4\sigma T_s^3 - 2\lambda_1/\Delta z_1, \quad
+J_{14} = 4(1 - \tau_{v,1})\tau_{v,2}\sigma T_{v,1}^3, \nonumber \\
+J_{15} = L\rho\psi_g g_g, \quad
+J_{16} = \rho c_p g_g, \quad
+J_{17} = 4(1 - \tau_{v,2})\sigma T_{v,2}^3, \nonumber \\
+J_{21} = 4(1 - \tau_{v,1})\tau_{v,2}\sigma T_{v,2}^3, \quad
+J_{22} = L\rho\chi_{v,1}g_{v,1}, \quad
+J_{23} = \rho c_p g_{v,1}, \nonumber \\
+J_{24} = - \rho g_{v,1}(c_p + LD\chi_{v,1}) - 8(1 - \tau_{v,1})\sigma T_{v,1}^3 - C_{v,1}/\delta t, \quad
+J_{27} = 4(1 - \tau_{v,1})(1 - \tau_{v,2})\sigma T_{v,2}^3, \nonumber \\
+J_{31} = 4(1 - \tau_{v,2})\sigma T_s^3, \quad
+J_{34} = 4(1 - \tau_{v,1})(1 - \tau_{v,2})\sigma T_s^3, \nonumber\\
+J_{35} = L\rho\chi_{v,2}g_{v,2}, \quad
+J_{36} = \rho c_p g_{v,2}, \quad
+J_{37} = - \rho g_{v,2}(c_p + LD\chi_{v,2}) - 8(1 - \tau_{v,2})\sigma T_{v,2}^3 - C_{v,2}/\delta t, \nonumber \\
+J_{43} = g_a + g_c + g_{v,1}, \quad
+J_{44} = -g_{v,1}, \quad
+J_{46} = -g_c, \nonumber \\
+J_{51} = -g_s, \quad
+J_{53} = -g_c, \quad
+J_{56} = g_c + g_s + g_{v,2}, \quad
+J_{57} = -g_{v,2}, \nonumber \\
+J_{62} = g_a + g_c + \chi_{v,1}g_{v,1}, \quad
+J_{64} = -D\chi_{v,1}g_{v,1}, \quad
+J_{65} = -g_c, \nonumber \\
+J_{71} = -D\chi_s g_s, \quad
+J_{72} = -g_c, \quad
+J_{75} = g_c + \chi_s g_s + \chi_{v,2}g_{v,2}, \quad
+J_{77} = -D\chi_{v,2}g_{v,2},
+\end{gather}
+the flux conservation vector elements are
+\begin{gather}
+f_1 = -(R_s - G_s - H_s - LE_s), \nonumber \\
+f_2 = -[R_{v,1} - H_{v,1} - LE_{v,1} - C_{v,1}(T_{v,1} - T_{v,1}^{(0)})/\delta t], \nonumber \\
+f_3 = -[R_{v,2} - H_{v,2} - LE_{v,2} - C_{v,2}(T_{v,2} - T_{v,2}^{(0)})/\delta t], \nonumber \\
+f_4 = -(H - H_c - H_{v,1})/(\rho c_p), \nonumber \\
+f_5 = -(H_c - H_s - H_{v,2})/(\rho c_p), \nonumber \\
+f_6 = -(E - E_c - E_{v,1})/\rho, \nonumber \\
+f_7 = -(E_c - E_s - E_{v,2})/\rho
+\end{gather}  
+and the flux increments are
+\begin{gather}
+\delta Es = \rho \chi_s g_s(D\delta Ts - \delta Q_{c,2}), \nonumber \\
+\delta E_{v,1} = \rho \chi_{v,1} g_{v,1} (D\delta T_{v,1} - \delta Q_{c,1}), \nonumber \\
+\delta E_{v,2} = \rho \chi_{v,2} g_{v,2} (D\delta T_{v,2} - \delta Q_{c,2}), \nonumber \\
+\delta G_s = 2 k_1 \delta T_s/\Delta z_1, \nonumber \\
+\delta H_s = \rho c_p g_s(\delta Ts - \delta T_{c,2}), \nonumber \\
+\delta H_{v,1} = \rho c_p g_{v,1}(\delta T_{v,1} - \delta T_{c,1}), \nonumber \\
+\delta H_{v,2} = \rho c_p g_{v,2}(\delta T_{v,2} - \delta T_{c,2}).
+\end{gather}  
+
+\subsubsection{Sub-canopy snow melt}
+If the updated surface temperature exceeds $T_m$ and there is snow with ice mass $I$ on the ground, it is assumed to melt at rate $M=I/\delta t$, melt energy $L_f M$ is added to $f_1$ and the increments are recalculated. If the updated surface temperature is then less than $T_m$, the snow does not all melt in the timestep. The surface fluxes and ${\bf f}$ are recalculated with $T_s = T_m$, elements in the first row of the Jacobian matrix are changed to 0 except $J_{11}=-1$ and the increments are recalculated. The melt rate is then given by $M = \delta x_1/L_f$.
+
+
+\subsubsection{Sub-canopy diagnostics}
+Sub-canopy windspeed at height $z$ is diagnosed as
+\begin{equation}
+U = f_vU_b\frac{\ln(z/z_{0g})}{\ln(h_b/z_{0g})} + 
+    (1-f_v)U_a\left[\frac{\ln(z/z_{0g}) - \psi_m(z/L_O) + \psi_m(z_{0g}/L_O)}
+                         {\ln(z_U/z_{0g}) - \psi_m(z_U/L_O) + \psi_m(z_{0g}/L_O)}\right]
+\end{equation}
+for canopy-base wind speed
+\begin{equation}
+U_b = \exp\left[\eta\left(\frac{h_b}{h_c}-1\right)\right].
+\end{equation}
+The sub-canopy air temperature is
+\begin{equation}
+T = T_s - \frac{H_s}{\rho c_p g_s}
+\end{equation}
+for surface resistance
+\begin{equation}
+g_s = \frac{f_vk^2U_b}{\ln(z/z_{0g})\ln(z/z_{0h})} +
+      \frac{(1-f_v)ku_*}{\ln(z/z_{0h}) - \psi_h(z/L_O) + \psi_h(z_{0h}/L_O)}.
+\end{equation}
+
+\subsection{Stability functions (functions {\tt psim}, {\tt psih})}
+Arguments $z$ and $L_O$ define $\zeta = z/L_O$. The momentum and scalar stability functions are
+\begin{equation}
+\psi_m(\zeta) = 
+\begin{cases}
+    2\ln\left(\frac{1+x}{2}\right) + \ln\left(\frac{1+x^2}{2}\right) 
+    - 2\arctan x + \frac{\pi}{2}    & \zeta<0 \\
+    -5\zeta                          &  0 \leq \zeta \\
+\end{cases}
+\end{equation}
+and
+\begin{equation}
+\psi_H(\zeta) = 
+\begin{cases}
+    2\ln\left(\frac{1+x^2}{2}\right) & \zeta<0 \\
+    -5\zeta                          &  0 \leq \zeta, \\
+\end{cases}
+\end{equation}
+with $x = (1 - 16\zeta)^{1/4}$ and $-2 \leq\zeta\leq 1$. 
+
+\section{Canopy snow mass balance (subroutine {\tt INTERCEPT})}
+
+The mass of snow added to a canopy layer by interception of snowfall in a timestep is either
+\begin{equation}
+\delta S_v = f_vS_f\delta t
+\end{equation}
+for linear interception option {\tt CANINT 1} or
+\begin{equation}
+\delta S_v = (S_c - S_v)\left[1 - \exp\left(-\frac{f_vS_f\delta t}{S_c}\right)\right]
+\end{equation}
+for non-linear interception option {\tt CANINT 2}, with the limitation $\delta S_v \leq S_c - S_v$.
+The rate of snowfall reaching the next layer or the ground is reduced to $S_f - \delta S_v/\delta t$. Snow sublimates from a canopy layer at rate $E_v$ if $E_v>0$ or is added to the canopy layer snow mass if $E_v<0$ and $T_v<T_m$. If the vegetation layer temperature is greater than $T_m$, the amount of melt is $M = L_f^{-1}C_v(T_v - T_m)$, $T_v$ is reset to $T_m$, and the melt water drips from the canopy to the ground. The mass of snow removed by unloading in a timestep is
+\begin{equation}
+\delta S_v = \frac{\delta t}{\tau_u}S_v + m_uM
+\end{equation}
+for time/melt-dependent unloading ({\tt CANUNL 1}) or
+\begin{equation}
+\delta S_v = \left[\frac{1}{c_T}\max(T_v-270.15, 0) + \frac{U_a}{c_U}\right]S_v,
+\end{equation}
+for temperature/wind-dependent unloading ({\tt CANUNL 2}).
+
+\section{Snow on the ground (subroutine {\tt SNOW})}
+
+\subsection{Heat conduction}
+
+The heat capacity of a snow layer with ice content $I$ and liquid water content $W$ is
+\begin{equation}
+C_{sn} = c_{\rm ice}I + c_{\rm wat}W. 
+\end{equation}
+If there is one snow layer, the increment to the layer temperature due to heat conduction over a timestep is
+\begin{equation}
+\delta T_{sn,1} = \frac{[G_s - U_1(T_{sn,1} - T_{sl,1})]\delta t}{C_{sn,1} + U_1\delta t}
+\end{equation}
+for thermal transmittance
+\begin{equation}
+U_1 = 2\left(\frac{D_{sn,1}}{\lambda_{sn,1}} + \frac{\Delta z_{sl,1}}{\lambda_{sl,1}}\right)^{-1}.
+\end{equation}
+If there is more than one snow layer, snow layer temperature increments are found by solving a tridiagonal matrix equation (subroutine {\tt TRIDIAG}) with thermal transmittance between layers ($U$), below-diagonal ($a$), diagonal ($b$) and above-diagonal ($c$) matrix elements, and right-hand side vector elements ($r$)
+\begin{align}
+U_1 &= 2\left(\frac{D_{sn,1}}{\lambda_{sn,1}} + \frac{D_{sn,2}}{\lambda_{sn,2}}\right)^{-1} \\
+b_1 &= C_{sn,1} + U_1 \delta t \\
+c_1 &= -U_1\delta t \\
+r_1 &=  [G_s - U_1(T_{sn,1} - T_{sn,2})]\delta t
+\end{align}
+for $n=1$,
+\begin{align}
+U_n &= 2\left(\frac{D_{sn,n}}{\lambda_{sn,n}} + \frac{D_{sn,n+1}}{\lambda_{sn,n+1}}\right)^{-1} \\
+a_n &= c_{n-1} \\
+b_n &= C_{sn,n} + (U_{n-1} + U_n)\delta t \\
+c_n &= -U_n\delta t \\
+r_n &= U_{n-1}(T_{sn,n-1} - T_{sn,n})\delta t + U_n(T_{sn,n+1} - T_{sn,n})\delta t
+\end{align}
+for $n=2,...,N_{\rm snow}-1$, and
+\begin{align}
+U_n &= 2\left(\frac{D_{sn,n}}{\lambda_{sn,n}} + \frac{\Delta z_{sl,1}}{\lambda_{sl,1}}\right)^{-1} \\
+a_n &= c_{n-1} \\
+b_n &= C_{sn,n} + (U_{n-1} + U_n)\delta t \\
+r_n &= U_{n-1}(T_{sn,n-1} - T_{sn,n})\delta t + U_n(T_{sl,1} - T_{sn,n})\delta t
+\end{align}
+for $n=N_{\rm snow}$. The heat flux at the base of the snow into the soil is $G_{\rm soil} = U_{N_{\rm snow}}(T_{sn,N_{\rm snow}} - T_{sl,1})$.
+
+\subsection{Melt}
+The total amount of ice removed by surface melting is $\delta I = M\delta t$. If heat conduction without phase change results in a snow layer temperature $T_{sn} > T_m$, layer melt $L_f^{-1}C_{sn}(T_{sn} - T_m)$ is added to $\delta I$ and the temperature is reset to $T_m$. Starting from the top layer and working downwards, a layer melts entirely if $\delta I$ exceeds the layer ice mass; the ice in the layer is then entirely turned to liquid water, the layer is removed by setting its thickness to zero, and the ice mass is subtracted from $\delta I$ for the next layer. If the layer only partially melts, the melt is added to the liquid content of the layer, the layer thickness is reduced to $(1 - \delta I/I)D_{sn}$ and the loop through layers terminates. 
+
+\subsection{Sublimation}
+The total amount of ice removed by surface sublimation is $\delta I = E\delta t$. Starting from the top layer and working downwards, a layer sublimates entirely if $\delta I$ exceeds the layer ice mass, the layer is removed by setting its thickness to zero, and the ice mass is subtracted from $\delta I$ for the next layer. If the layer only partially sublimates, the layer thickness is reduced to $(1 - \delta I/I)D_{sn}$ and the loop through layers terminates.
+
+\subsection{Snow density}
+
+\subsubsection{Fixed density (option {\tt DENSTY 0})}
+
+Snow has constant density $\rho_0$.
+
+\subsubsection{Compaction with age (option {\tt DENSTY 1})}
+
+The density of a snow layer with ice content $I$, liquid water content $W$ and thickness $D_{sn}$ at the beginning of a timestep is diagnosed as
+\begin{equation}
+\rho_s = \frac{I + W}{D_{sn}}.
+\end{equation}
+This is then incremented by
+\begin{equation}
+\delta\rho_s = (\rho_{\rm max} - \rho_s)(1 - e^{-\delta t/\tau_\rho}).
+\end{equation}
+Maximum density $\rho_{\rm max}$ has different values $\rho_{\rm cold}$ and $\rho_{\rm melt}$ for cold and melting snow. The thickness of the compacted layer at the end of the timestep is retrieved as
+\begin{equation}
+D_{sn} = \frac{I + W}{\rho_s}.
+\end{equation}
+
+\subsubsection{Compaction by overburden and thermal metamorphism (option {\tt DENSTY 2})}
+
+Layer density is incremented by
+\begin{equation}
+\delta\rho_s = \rho_s\left\{\frac{gm}{\eta} + c_1 \exp\left[\frac{(T_{sn} - T_m)}{23.8} 
+                                  - \max\left(\frac{\rho_s - 150}{21.7}, 0\right)\right]\right\}\delta t
+\end{equation}
+where
+\begin{equation}
+\eta = \eta_0\exp\left[-\frac{(T_{sn} - T_m)}{12.4} + \frac{\rho_s}{55.6}\right]
+\end{equation}
+and the snow mass overlying the middle of layer $n$ is
+\begin{equation}
+m_n = \sum_{j=1}^{n-1}(I_j + W_j) + 0.5(I_n + W_n).
+\end{equation}
+
+\subsection{Grain growth}
+
+\subsubsection{Temperature metamorphism from JULES (option {\tt SGRAIN 1})}
+The increment in grain radius in a snow layer over a timestep is $\delta r = g_r r^{-1}\delta t$ for grain area growth rate
+\begin{equation}
+g_r = 
+\begin{cases}
+    2\times10^{-13}\ {\rm m^2\ s^{-1}}  & T_{sn} = T_m \\
+    2\times10^{-14}\ {\rm m^2\ s^{-1}}  & T_{sn} < T_m,r < 1.5 \times 10^{-4}{\rm m} \\
+    7.3\times10^{-8} \exp(-4600/T_{sn}) & T_{sn} < T_m,r \geq 1.5 \times 10^{-4}{\rm m} \\
+\end{cases}
+\end{equation}
+
+\subsubsection{Temperature gradient metamorphism from SNTHERM (option {\tt SGRAIN 1})}
+The temperature gradient in a snow layer is calculated as the temperature difference between the top and bottom of the layer divided by the layer thickness. The temperature at the top of a snow layer is $T_s$ for the surface layer and 
+\begin{equation}
+T_{sn,n-1/2} = \frac{D_{sn,n-1}T_{sn,n} + D_{sn,n} T_{sn,n-1}}{D_{sn,n} + D_{sn,n-1}}
+\end{equation}
+for $n>1$. The temperature at the base of the snow is
+\begin{equation}
+T_{sn,n+1/2} = \frac{D_{sn,n}T_{sn,n} + \Delta z_{sl,1} T_{sl,1}}{D_{sn,n} + \Delta z_{sl,1}}
+\end{equation}
+for $n = N_{\rm snow}$. The vertical vapour flux in a layer is
+\begin{equation}
+q_v = 9.2\times 10^{-5}\left(\frac{T_{sn,n}}{T_m}\right)^6 \frac{\partial\rho_{\rm sat}}{\partial T}
+                       \left(\frac{T_{sn,n-1/2} - T_{sn,n+1/2}}{D_{sn,n}} \right)
+\end{equation}
+with
+\begin{equation}
+\frac{\partial\rho_{\rm sat}}{\partial T} = \frac{e_0}{R_{\rm wat} T^2}
+\left(\frac{L_s}{R_{\rm wat} T} - 1 \right)
+\exp\left[\frac{L_s}{R_{\rm wat}}\left(\frac{1}{T_m} - \frac{1}{T}\right)\right].
+\end{equation}
+The grain area growth rate is
+\begin{equation}
+g_r = 
+\begin{cases}
+    1.25\times 10^{-7}\min(|q_v|, 10^{-6})  & \theta_w < 10^{-4}    \\
+    10^{-12}\min(\theta_w+0.05, 0.14)       & \theta_w \geq 10^{-4} \\
+\end{cases}
+\end{equation}
+where the volumetric liquid water content is
+\begin{equation}
+\theta_w = \frac{W}{\rho_{\rm wat}D_{sn}}.
+\end{equation} 
+
+\subsection{Adding and removing snow}
+
+Snowfall and frost ($E<0$ for $T_s<T_m$) are added to layer 1 with fresh snow density $\rho_f$ and grain size $r_0$. Snow unloading from a forest canopy is added to snow on the ground with the existing bulk density and grain size.
+
+All snow layers except the bottom layer have fixed (user specified or default) thicknesses. As snow depth changes, the thickness of the lowest layer changes until it falls below the fixed thickness or increases to more than twice the fixed thickness. The lowest layer is then combined with the layer above (decreasing) or split into two equal parts (increasing) if the maximum number of snow layers $N_{\rm smax}$ has not been reached. Ice mass, liquid water mass and internal energy contents of snow layers are stored before recalculating layer thicknesses and then redistributed according to conservation.
+
+\subsection{Liquid water movement in snow}
+
+\subsubsection{Free drainage (option {\tt HYDROL 0})}
+Liquid water drains from snow immediately and is added to runoff.
+
+\subsubsection{Bucket storage (option {\tt HYDROL 1})}
+A snow layer with porosity
+\begin{equation}
+\phi = 1 - \frac{I}{\rho_{\rm ice}D_{sn}}
+\end{equation}
+can hold a maximum mass $W_{\rm max}=\rho_{\rm wat}\phi D_{sn} W_{\rm irr}$ of liquid water. If the liquid mass of a layer exceeds the maximum, the excess is passed downwards to the next layer.
+
+\subsubsection{Gravitational drainage (option {\tt HYDROL 2})}
+Liquid water in excess of layer porosities ($\theta_w>\phi$) is first added to runoff. Saturated hydraulic conductivity in a layer and downward water flux due to gravitational drainage at the bottom of the layer are then parametrized as
+\begin{equation}
+k_{{\rm sat},n} = 0.31\frac{\rho_{\rm wat}gr_n^2}{\mu_{\rm wat}}\exp\left(-7.8\frac{\rho_{s,n}}{\rho_{\rm wat}}\right)
+\end{equation}
+and
+\begin{equation}
+Q_{w,n+1/2} = k_{{\rm sat},n}\left(\frac{\theta_{w,n} - \theta_{r,n}}{\phi_n - \theta_{r,n}}\right)^3
+\end{equation}
+for irreducible water content $\theta_{r,n} = W_{\rm irr}\phi_n$. The conservation equation for changes in liquid water content is discretized by an implicit upwind scheme
+\begin{equation}
+\frac{\theta_{w,n} - \theta_{w,n}^{(0)}}{\delta t} = \frac{Q_{w,n-1/2} - Q_{w,n+1/2}}{D_{sn,n}}
+\label{eq:water}
+\end{equation}
+with upper boundary condition $Q_{w,-1/2} = R_f/\rho_{\rm wat}$.
+
+Each driving data timestep is divided into ten substeps ($\delta t_s = 0.1\delta t$) to improve the numerical stability of solving equation (\ref{eq:water}). Layer liquid water contents at the end of each substep are found by the Newton-Raphson method, with increments in each iteration found by forward substitution. Zeros in the liquid mass balance residuals
+\begin{equation}
+r_n = \frac{\theta_{w,n} - \theta_{w,n}^{(0)}}{\delta t_s} + \frac{Q_{w,n-1/2} - Q_{w,n+1/2}}{D_{sn,n}}
+\end{equation}
+are sought by adding increments
+\begin{equation}
+\delta\theta_{w,n} = 
+\begin{cases}
+   -r_n/b_n                           & n = 1 \\
+  -(a_n\delta\theta_{w,n-1}+r_n)/b_n  & 1 < n \leq N_{\rm snow}
+\end{cases}
+\end{equation}
+and recalculating the water fluxes, with
+\begin{equation}
+a_n = -3\frac{k_{{\rm sat},n-1}}{D_{sn,n-1}}\frac{(\theta_{w,n-1} - \theta_{r,n-1})^2}{(\phi_{n-1} - \theta_{r,n-1})^3}
+\end{equation}
+and
+\begin{equation}
+b_n = \frac{1}{\delta t_s} + 3\frac{k_{{\rm sat},n}}{D_{sn,n}}\frac{(\theta_{w,n} - \theta_{r,n})^2}{(\phi_n - \theta_{r,n})^3}
+\end{equation}
+
+
+\subsubsection{Freezing of liquid water in snow}
+The cold content of a snow layer is $C_c = C_{sn}(T_m - T_{sn})$. If this is greater than zero and there is liquid water in the layer, an amount $\delta I = \min(W,L_f^{-1}C_c)$ freezes and is added to the layer ice mass. An increment $L_f\delta I/C_{sn}$ is added to the layer temperature.
+
+
+\section{Soil temperatures (subroutine {\tt SOIL})}
+
+Heat flux at the soil surface is $G_{\rm soil}=G_s$ if there is no snow and $G_{\rm soil} = G_{N_{\rm snow}}$ at the base of the snow if there is snow. Timestep increments in soil layer temperatures are found by solving a tridiagonal matrix equation with thermal transmittance between soil layers ($U$), below-diagonal ($a$), diagonal ($b$) and above-diagonal ($c$) matrix elements, and right-hand side vector elements ($r$)
+\begin{align}
+U_n &= 2\left(\frac{\Delta z_{sl,n}}{\lambda_{sl,n}} + \frac{\Delta z_{sl,n+1}}{\lambda_{sl,n+1}}\right)^{-1} \\
+b_n &= C_{sl,n} + U_n\delta t \\
+c_n &= -U_n\delta t \\
+r_n &=  [G_{\rm soil} + U_n(T_{sl,n+1} - T_{sl,n})]\delta t
+\end{align}
+for $n=1$,
+\begin{align}
+U_n &= 2\left(\frac{\Delta z_{sl,n}}{\lambda_{sl,n}} + \frac{\Delta z_{sl,n+1}}{\lambda_{sl,n+1}}\right)^{-1} \\
+a_n &= -c_{n-1} \\
+b_n &= C_{sl,n} + (U_{n-1} + U_n)\delta t \\
+c_n &= -U_n\delta t \\
+r_n &= U_{n-1}(T_{sl,n-1} - T_{sl,n})\delta t + U_n(T_{sl,n+1} - T_{sl,n})\delta t
+\end{align}
+for $n=2,...,N_{\rm soil}-1$, and
+\begin{align}
+U_n &= \frac{\lambda_{sl,n}}{\Delta z_{sl,n}} \\
+a_n &= -c_{n-1} \\
+b_n &= C_{sl,n} + (U_{n-1} + U_n)\delta t \\
+r_n &= U_{n-1}(T_{sl,n-1} - T_{sl,n})\delta t
+\end{align}
+for $n=N_{\rm soil}$. This assumes that there is no heat flux at the base of the soil model.
 
 \end{document}
 
