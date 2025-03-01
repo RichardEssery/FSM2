@@ -28,6 +28,7 @@ use LAYERS, only: &
 
 use PARAMETERS, only: &
   eta0,              &! Reference snow viscosity (Pa s)
+  nhyd,              &! Number of snow hydrology substeps
   rcld,              &! Maximum density for cold snow (kg/m^3)
   rfix,              &! Fixed snow density (kg/m^3)
   rgr0,              &! Fresh snow grain radius (m)
@@ -458,8 +459,8 @@ if (snd > 0) then  ! Existing or new snowpack
       thetaw(n) = phi(n)
     end if
   end do
-  dth = 0.1*dt
-  do i = 1, 10  ! subdivide timestep
+  dth = dt / nhyd
+  do i = 1, nhyd  ! subdivide timestep
     theta0(:) = thetaw(:)
     do j = 1, 10  ! Newton-Raphson iteration
       a(:) = 0

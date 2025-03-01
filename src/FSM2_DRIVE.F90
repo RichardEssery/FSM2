@@ -57,6 +57,7 @@ real :: &
   Pr,                &! Total precipitation (kg/m^2/s)
   Qs,                &! Saturation specific humidity
   RH,                &! Relative humidity (%)
+  RHmax,             &! Maximum relative humidity (%)
   SW,                &! Incoming shortwave radiation (W/m^2)
   Tc                  ! Temperature (C)
 
@@ -66,6 +67,12 @@ read(umet,*,end=1) year,month,day,hour,SW,LW,Sf,Rf,Ta,RH,Ua,Ps
 ! Convert relative to specific humidity
 Tc = Ta - Tm
 es = e0*exp(17.5043*Tc/(241.3 + Tc))
+if (Tc > 0) then
+  RHmax = 100
+else
+  RHmax = 100*exp(22.4422*Tc/(272.186 + Tc))/exp(17.5043*Tc/(241.3 + Tc))
+end if
+RH = max(RH,RHmax)
 Qa = (RH/100)*eps*es/Ps
 #endif
 #if DRIV1D == 2

@@ -22,6 +22,8 @@ real :: &
   wcan                ! Canopy wind decay coefficient
 
 ! Snow parameters
+integer :: &
+  nhyd                ! Number of snow hydrology substeps
 real :: &
   asmn,              &! Minimum albedo for melting snow
   asmx,              &! Maximum albedo for fresh snow
@@ -70,15 +72,15 @@ implicit none
 
 namelist /params/ acn0,acns,avg0,avgs,cvai,gsnf,hbas,kext,leaf,svai,   &
                   Tunl,Uunl,wcan,Pmlt,Tadd,                            &
-                  asmn,asmx,eta0,hfsn,kfix,rcld,rfix,rgr0,rhof,rmlt,   &
-                  Salb,snda,Talb,tcld,tmlt,trho,Wirr,z0sn,fcly,fsnd,   &
-                  gsat,z0sf 
+                  asmn,asmx,eta0,hfsn,kfix,nhyd,rcld,rfix,rgr0,rhof,   &
+                  rmlt,Salb,snda,Talb,tcld,tmlt,trho,Wirr,z0sn,        &
+                  fcly,fsnd,gsat,z0sf 
 
 ! Vegetation parameters
 acn0 = 0.1            ! Snow-free dense canopy albedo
-acns = 0.4            ! Snow-covered dense canopy albedo
+acns = 0.3            ! Snow-covered dense canopy albedo
 avg0 = 0.27           ! Canopy element reflectivity
-avgs = 0.77           ! Canopy snow reflectivity
+avgs = 0.65           ! Canopy snow reflectivity
 cvai = 3.6e4          ! Vegetation heat capacity per unit VAI (J/K/m^2)
 eunl = 240*3600       ! Exponential unloading time scale (s)
 gsnf = 0.01           ! Snow-free vegetation moisture conductance (m/s)
@@ -97,6 +99,7 @@ asmx = 0.85           ! Maximum albedo for fresh snow
 eta0 = 3.7e7          ! Reference snow viscosity (Pa s)
 hfsn = 0.1            ! Snowcover fraction depth scale (m)
 kfix = 0.24           ! Fixed thermal conductivity of snow (W/m/K)
+nhyd = 10             ! Number of snow hydrology substeps
 rcld = 300            ! Maximum density for cold snow (kg/m^3)
 rfix = 300            ! Fixed snow density (kg/m^3)
 rgr0 = 5e-5           ! Fresh snow grain radius (m)

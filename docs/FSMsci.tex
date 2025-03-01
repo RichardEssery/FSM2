@@ -7,7 +7,7 @@
 \usepackage{hyperref}
 \usepackage{longtable}
 \title{Flexible Snow Model scientific documentation}
-\author{Version 2.1.0}
+\author{Version 2.1.1}
 \date{\today}
 \begin{document}
 \maketitle
@@ -136,11 +136,11 @@ Table 6. Parameters (subroutine {\tt FSM2\_PARAMS}).
 Documentation                                      & Namelist   & Default          \\
 \hline
 Snow-free dense canopy albedo $\alpha_{c0}$        & {\tt acn0} & 0.1              \\
-Snow-covered dense canopy albedo $\alpha_{cs}$     & {\tt acns} & 0.4              \\ 
+Snow-covered dense canopy albedo $\alpha_{cs}$     & {\tt acns} & 0.3              \\ 
 Minimum albedo for melting snow $\alpha_{\rm min}$ & {\tt asmn} & 0.5              \\
 Maximum albedo for fresh snow $\alpha_{\rm max}$   & {\tt asmx} & 0.85             \\
 Canopy element reflectivity $\alpha_{\Lambda 0}$   & {\tt avg0} & 0.27             \\
-Canopy snow reflectivity $\alpha_{\Lambda s}$      & {\tt avgs} & 0.77             \\ 
+Canopy snow reflectivity $\alpha_{\Lambda s}$      & {\tt avgs} & 0.65             \\ 
 Vegetation heat capacity per unit VAI $C_\Lambda$  & {\tt cvai} & $3.6 \times 10^4$ J K$^{-1}$ m$^{-2}$ \\
 Vegetation turbulent transfer coefficient $C_{\rm veg}$ & {\tt cveg} & 20          \\
 Reference snow viscosity $\eta_0$                  & {\tt eta0} & $3.7 \times 10^7$ Pa s \\
@@ -155,6 +155,7 @@ Canopy light extinction coefficient $k_{\rm ext}$  & {\tt kext} &  0.5          
 Fixed snow thermal conductivity $\lambda_0$        & {\tt kfix} & 0.24 W m$^{-1}$ K$^{-1}$  \\
 Leaf boundary layer resistance $r_{\rm leaf}$      & {\tt leaf} & 20 s$^{1/2}$ m$^{-1/2}$   \\ 
 Melt unloading fraction $m_u$                      & {\tt munl} & 0.4                       \\
+Number of snow hydrology substeps $N_{\rm shyd}$   & {\tt nhyd} & 10               \\
 Maximum density for cold snow $\rho_{\rm cold}$    & {\tt rcld} & 300 kg m$^{-3}$  \\
 Fixed snow density $\rho_0$                        & {\tt rfix} & 300 kg m$^{-3}$  \\
 Fresh snow grain radius $r_0$                      & {\tt rgr0} & $5\times10^{-5}$ m  \\
@@ -187,7 +188,7 @@ Assuming that relative humidity is measured with respect to water at all tempera
 \begin{equation}
 Q_a = \frac{RH}{100}\frac{\varepsilon e_0}{P_s}\exp\left(\frac{17.5043T_a}{241.3 + T_a}\right)
 \end{equation}
-for air temperature in $^\circ$C.
+for air temperature in $^\circ$C. The humidity is limited to not exceed saturation with respect to ice.
 
 \subsection{ESM-SnowMIP format driving data (option {\tt DRIV1D 2)}}
 
@@ -1019,7 +1020,7 @@ for irreducible water content $\theta_{r,n} = W_{\rm irr}\phi_n$. The conservati
 \end{equation}
 with upper boundary condition $Q_{w,-1/2} = R_f/\rho_{\rm wat}$.
 
-Each driving data timestep is divided into ten substeps ($\delta t_s = 0.1\delta t$) to improve the numerical stability of solving equation (\ref{eq:water}). Layer liquid water contents at the end of each substep are found by the Newton-Raphson method, with increments in each iteration found by forward substitution. Zeros in the liquid mass balance residuals
+Each driving data timestep is divided into $N_{\tt shyd}$ substeps of length $\delta t_s = \delta t / N_{\tt shyd}$ to improve the numerical stability of solving equation (\ref{eq:water}). Layer liquid water contents at the end of each substep are found by the Newton-Raphson method, with increments in each iteration found by forward substitution. Zeros in the liquid mass balance residuals
 \begin{equation}
 r_n = \frac{\theta_{w,n} - \theta_{w,n}^{(0)}}{\delta t_s} + \frac{Q_{w,n-1/2} - Q_{w,n+1/2}}{D_{sn,n}}
 \end{equation}

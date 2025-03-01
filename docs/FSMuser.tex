@@ -1,9 +1,8 @@
 \documentclass{article}
 \usepackage[margin=2cm]{geometry}
-\usepackage{hyperref}
 \usepackage{longtable}
 \title{Flexible Snow Model user guide}
-\author{Version 2.1.0}
+\author{Version 2.1.1}
 \date{\today}
 \begin{document}
 \maketitle
@@ -22,7 +21,7 @@ FSM2 is coded in Fortran and consists of subroutines and modules contained in th
 Option       & Description & Possible values \\ \hline
 {\tt DRIV1D} & 1D driving data format
 &   1 - FSM format \\
-& & 2 - \href{https://www.geos.ed.ac.uk/~ressery/ESM-SnowMIP/ESMSnowMIP_Reference_sites.pdf}{ESM-SnowMIP} format \\ \hline
+& & 2 - ESM-SnowMIP format \\ \hline
 {\tt SWPART} & Shortwave radiation partition
 &   0 - SW radiation assumed to be diffuse \\
 & & 1 - SW radiation split into diffuse and direct-beam components \\ \hline
@@ -95,6 +94,7 @@ Snow parameters  & Default  & Description                             & Used by 
 {\tt eta0} & $3.7\times10^7$ Pa s & Reference snow viscosity          &{\tt DENSTY 2} \\
 {\tt hfsn} & 0.1 m          & Snow cover fraction depth scale         &               \\
 {\tt kfix} & 0.24 W m$^{-1}$ K$^{-1}$ & Fixed thermal conductivity    &{\tt CONDCT 0} \\
+{\tt nhyd} & 10             & Number of snow hydrology substeps       &{\tt HYDROL 2} \\
 {\tt rcld} & 300 kg m$^{-3}$ & Maximum density for cold snow          &{\tt DENSTY 1} \\
 {\tt rfix} & 300 kg m$^{-3}$ & Fixed snow density                     &{\tt DENSTY 0} \\
 {\tt rgr0} & $5\times10^{-5}$ m & Fresh snow grain radius             &               \\
@@ -114,9 +114,9 @@ Snow parameters  & Default  & Description                             & Used by 
 \begin{longtable}{|l|l|l|l|} \hline
 Veg. parameters       & Default       & Description                               &  Used by       \\ \hline
 {\tt acn0} & 0.1                      & Snow-free dense canopy albedo             & {\tt CANRAD 1} \\
-{\tt acns} & 0.4                      & Snow-covered dense canopy albedo          & {\tt CANRAD 1} \\  
-{\tt avg0} & 0.21                     & Canopy element reflectivity               & {\tt CANRAD 2} \\
-{\tt avgs} & 0.6                      & Canopy snow reflectivity                  & {\tt CANRAD 2} \\  
+{\tt acns} & 0.3                      & Snow-covered dense canopy albedo          & {\tt CANRAD 1} \\  
+{\tt avg0} & 0.27                     & Canopy element reflectivity               & {\tt CANRAD 2} \\
+{\tt avgs} & 0.65                     & Canopy snow reflectivity                  & {\tt CANRAD 2} \\  
 {\tt cvai} & $3.6\times 10^4$ J K$^{-1}$ m$^{-2}$ & Vegetation heat capacity per unit VAI &        \\
 {\tt eunl} & 240 h                    & exponential unloading timescale           & {\tt CANUNL 1} \\
 {\tt gsnf} & 0.01 m s$^{-1}$          & Snow-free vegetation moisture conductance &                \\
