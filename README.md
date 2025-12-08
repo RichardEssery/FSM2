@@ -18,7 +18,7 @@ which runs simulations for the winter of 2004-2005 at Alptal, Switzerland (Stäh
 
 Essery (2015). A Factorial Snowpack Model (FSM 1.0). *Geoscientific Model Development*, **8**, 3867-3876, [doi:10.5194/gmd-8-3867-2015](http://www.geosci-model-dev.net/8/3867/2015/)
 
-Essery, Mazzotti, Barr, Jonas, Quaife and Rutter (2024). A Flexible Snow Model (FSM 2.1.1) including a forest canopy. *Geoscientific Model Development*, **18**, 3583-3605, [doi:10.5194/egusphere-18-3583-2025](https://doi.org/10.5194/gmd-18-3583-2025)
+Essery, Mazzotti, Barr, Jonas, Quaife and Rutter (2025). A Flexible Snow Model (FSM 2.1.1) including a forest canopy. *Geoscientific Model Development*, **18**, 3583-3605, [doi:10.5194/egusphere-18-3583-2025](https://doi.org/10.5194/gmd-18-3583-2025)
 
 Stähli and Gustafsson (2006). The role of snow interception in winter-time radiation processes of a coniferous sub-alpine forest.
 *Hydrological Processes*, **23**, 2498–2512, [doi:10.1002/hyp.7180](https://onlinelibrary.wiley.com/doi/abs/10.1002/hyp.7180)
