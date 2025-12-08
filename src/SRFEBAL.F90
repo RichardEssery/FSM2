@@ -257,7 +257,7 @@ else ! forest
 rL = 0
 ustar = fveg*vkman*Ua/log((zU1-d)/z0v) + (1 - fveg)*vkman*Ua/log(zU1/z0g)
 Kh = vkman*ustar*(vegh - d)
-rd = log((zT1-d)/(vegh-d))/(vkman*ustar) + vegh*(exp(wcan*(1 - zh(1)/vegh) - 1))/(wcan*Kh)
+rd = log((zT1-d)/(vegh-d))/(vkman*ustar) + vegh*(exp(wcan*(1 - zh(1)/vegh)) - 1)/(wcan*Kh)
 ro = log(zT1/zh(1))/(vkman*ustar)
 ga = fveg/rd + (1 - fveg)/ro
 do ne = 1, 10
@@ -272,7 +272,7 @@ do ne = 1, 10
     Kh = vkman*ustar*(vegh - d)*sqrt(1 - 16*(vegh - d)*rL)
   end if
   rd = (log((zT1-d)/(vegh-d)) - psih(zT1-d,rL) + psih(vegh-d,rL))/(vkman*ustar) +  &
-       vegh*(exp(wcan*(1 - zh(1)/vegh) - 1))/(wcan*Kh)
+       vegh*(exp(wcan*(1 - zh(1)/vegh)) - 1)/(wcan*Kh)
   ro = (log(zT1/zh(1)) - psih(zT1,rL) + psih(zh(1),rL))/(vkman*ustar)
   ga = fveg/rd + (1 - fveg)/ro
 #endif
@@ -288,7 +288,7 @@ do ne = 1, 10
   n = Ncnpy
   Uc = exp(wcan*(hbas/vegh - 1))*Uh
   rd = log(hbas/z0g)*log(hbas/z0h)/(vkman**2*Uc) +  &
-       vegh*exp(wcan)*(exp(-wcan*hbas/vegh) - exp(-wcan*zh(n)))/(wcan*Kh)
+       vegh*exp(wcan)*(exp(-wcan*hbas/vegh) - exp(-wcan*zh(n)/vegh))/(wcan*Kh)
   ro = (log(zh(n)/z0h) - psih(zh(n),rL) + psih(z0h,rL))/(vkman*ustar)
   gs = fveg/rd + (1 - fveg)/ro
 
@@ -638,7 +638,7 @@ else
   Uc = exp(wcan*(hbas/vegh - 1))*Uh
   Usub = fveg*Uc*log(zsub/z0g)/log(hbas/z0g) +  &
          (1 - fveg)*Ua*(log(zsub/z0g) - psim(zsub,rL) + psim(z0g,rL)) / &
-                       (log(zU/z0g) - psim(zU,rL) + psim(z0g,rL))
+                       (log(zU1/z0g) - psim(zU1,rL) + psim(z0g,rL))
   rd = log(zsub/z0g)*log(zsub/z0h)/(vkman**2*Uc)
   ro = (log(zsub/z0h) - psih(zsub,rL) + psih(z0h,rL))/(vkman*ustar)
   gs = fveg/rd + (1 - fveg)/ro

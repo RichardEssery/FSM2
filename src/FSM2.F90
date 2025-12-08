@@ -1,5 +1,5 @@
 !----------------------------------------------------------------------!
-! Flexible Snow Model (FSM version 2.1.1)                              !
+! Flexible Snow Model (FSM version 2.1.2)                              !
 !                                                                      !
 ! Richard Essery                                                       !
 ! School of GeoSciences                                                !
