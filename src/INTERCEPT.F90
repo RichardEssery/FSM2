@@ -61,9 +61,9 @@ if (lveg(1) > epsilon(lveg)) then
     ! Interception of falling snow 
     fveg = 1 - exp(-kext*lveg(n)) 
 #if CANINT == 1
-    dsvg = fveg*Sf*dt
+    dsvg = fveg*Sfg*dt
 #elif CANINT == 2
-    dsvg = (Scap(n) - Sveg(n))*(1 - exp(-fveg*Sf*dt/Scap(n)))
+    dsvg = (Scap(n) - Sveg(n))*(1 - exp(-fveg*Sfg*dt/Scap(n)))
 #else
     stop 'Unknown option CANINT'
 #endif
