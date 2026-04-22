@@ -327,7 +327,7 @@ do
                        ! Vegetation characteristics                    &
                        alb0(n),vegh(n),VAI(n),                         &
                        ! State variables                               &
-                       albs(n),Tsrf(n),Dsnw(:,n),Nsnow(n), Qcan(:,n),  &
+                       albs(n),Tsrf(n),Dsnw(:,n),Nsnow(n),Qcan(:,n),   &
                        Rgrn(:,n),Sice(:,n),Sliq(:,n),Sveg(:,n),        &
                        Tcan(:,n),Tsnow(:,n),Tsoil(:,n),Tveg(:,n),      &
                        Vsmc(:,n),                                      &

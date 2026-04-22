@@ -31,11 +31,10 @@ real, intent(in) :: &
   Rf,                &! Rainfall rate (kg/m2/s)
   Sdif,              &! Diffuse shortwave radiation (W/m^2)
   Sdir,              &! Direct-beam shortwave radiation (W/m^2)
+  Sf,                &! Snowfall rate (kg/m2/s)
   Ta,                &! Air temperature (K)
   trans,             &! Wind-blown snow transport rate (kg/m^2/s)
   Ua                  ! Wind speed (m/s)
-real, intent(inout) :: &
-  Sf                  ! Snowfall rate (kg/m2/s)
 
 ! Vegetation characteristics
 real, intent(in) :: &
@@ -111,6 +110,7 @@ real :: &
   Esrf,              &! Moisture flux from the surface (kg/m^2/s)
   Gsrf,              &! Heat flux into snow/ground surface (W/m^2)
   Gsoil,             &! Heat flux into soil (W/m^2)
+  Sfg,               &! Snowfall reaching the ground (kg/m2/s)
   SWsrf,             &! SW absorbed by snow/ground surface (W/m^2)
   unload,            &! Snow mass unloaded from vegetation (kg/m^2)
   Eveg(Ncnpy),       &! Moisture flux from vegetation layers (kg/m^2/s)
@@ -129,10 +129,12 @@ call SRFEBAL(cveg,Ds1,dt,fcans,fsnow,gs1,ks1,lveg,LW,Ps,Qa,            &
              Tsrf,Qcan,Sice,Tcan,Tveg,                                 &
              Esrf,Eveg,Gsrf,H,LE,LWout,LWsub,Melt,subl,Tsub,Usub)
 
-call INTERCEPT(dt,cveg,Eveg,lveg,Scap,Ta,Ua,Sf,Sveg,Tveg,drip,svg,unload)
+call INTERCEPT(dt,cveg,Eveg,lveg,Scap,Sf,Ta,Ua,Sveg,Tveg,              &
+               drip,Sfg,svg,unload)
 
-call SNOW(dt,drip,Esrf,Gsrf,ksnow,ksoil,Melt,Rf,Sf,Ta,trans,Tsrf,unload, &
-          Nsnow,Dsnw,Rgrn,Sice,Sliq,Tsnow,Tsoil,Gsoil,Roff,snd,snw,Wflx)
+call SNOW(dt,drip,Esrf,Gsrf,ksnow,ksoil,Melt,Rf,Sfg,Ta,trans,Tsrf,     &
+          unload,Nsnow,Dsnw,Rgrn,Sice,Sliq,Tsnow,Tsoil,Gsoil,Roff,     &
+          snd,snw,Wflx)
 
 call SOIL(csoil,dt,Gsoil,ksoil,Tsoil)
 

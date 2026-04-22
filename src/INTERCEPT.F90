@@ -1,8 +1,8 @@
 !-----------------------------------------------------------------------
 ! Mass balance of snow intercepted by vegetation
 !-----------------------------------------------------------------------
-subroutine INTERCEPT(dt,cveg,Eveg,lveg,Scap,Ta,Ua,Sf,Sveg,Tveg,        &
-                     drip,svg,unload)
+subroutine INTERCEPT(dt,cveg,Eveg,lveg,Scap,Sf,Ta,Ua,Sveg,Tveg,        &
+                     drip,Sfg,svg,unload)
                      
 #include "OPTS.h"
 
@@ -29,16 +29,17 @@ real, intent(in) :: &
   Eveg(Ncnpy),       &! Moisture flux from vegetation layers (kg/m^2/s)
   lveg(Ncnpy),       &! Canopy layer vegetation area indices
   Scap(Ncnpy),       &! Vegetation layer snow capacities (kg/m^2)
+  Sf,                &! Snowfall rate (kg/m2/s)
   Ta,                &! Air temperature (K)
   Ua                  ! Wind speed (m/s)
 
 real, intent(inout) :: &
-  Sf,                &! Snowfall rate (kg/m2/s)
   Sveg(Ncnpy),       &! Snow mass on vegetation layers (kg/m^2)
   Tveg(Ncnpy)         ! Vegetation layer temperatures (K)
 
 real, intent(out) :: &
   drip,              &! Melt water drip from vegetation (kg/m^2)
+  Sfg,               &! Snowfall reaching the ground (kg/m2/s)
   svg,               &! Total snow mass on vegetation (kg/m^2)
   unload              ! Snow mass unloaded from vegetation (kg/m^2)
 
@@ -51,6 +52,7 @@ real :: &
   melt                ! Canopy snow melt (kg/m^2)
 
 drip = 0
+Sfg = Sf
 svg = 0
 unload = 0
 if (lveg(1) > epsilon(lveg)) then
@@ -67,7 +69,7 @@ if (lveg(1) > epsilon(lveg)) then
 #endif
     if (Sveg(n) + dsvg > Scap(n)) dsvg = Scap(n) - Sveg(n)
     Sveg(n) = Sveg(n) + dsvg
-    Sf = Sf - dsvg/dt 
+    Sfg = Sfg - dsvg/dt 
     
     ! Sublimation of canopy snow
     if (Eveg(n) > 0) then
